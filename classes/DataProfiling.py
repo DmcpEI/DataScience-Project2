@@ -1,10 +1,13 @@
+import math
 import seaborn as sns
+import pandas as pd
+from matplotlib import pyplot as plt
 from matplotlib.pyplot import figure, savefig, show, subplots
+from matplotlib.figure import Figure
 from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
-    plot_multi_scatters_chart
+    plot_multi_scatters_chart, set_chart_labels
 from numpy import ndarray
 from pandas import Series, DataFrame
-from matplotlib.figure import Figure
 
 class DataVisualization:
     """
@@ -85,11 +88,81 @@ class DataVisualization:
     def plot_global_boxplots(self):
         """Plots boxplots for all numerical variables."""
 
+        variables_types: dict[str, list] = get_variable_types(self.data)
+        numeric: list[str] = variables_types["numeric"]
+        if [] != numeric:
+            figure(figsize=(8, 7))
+            self.data[numeric].boxplot(rot=45)
+            savefig(f"graphs/{self.data_loader.file_tag}_global_boxplot.png")
+            show()
+        else:
+            print("There are no numeric variables.")
+
     def plot_single_variable_boxplots(self):
         """Plots boxplots for each numerical variable."""
+        variables_types: dict[str, list] = get_variable_types(self.data)
+        numeric: list[str] = variables_types["numeric"]
+        numeric = [col for col in numeric if pd.api.types.is_numeric_dtype(self.data[col])]
+        if numeric:
+            # Determine the size of the grid
+            num_plots = len(numeric)
+            grid_size = math.ceil(math.sqrt(num_plots))  # Square grid (equal rows and columns)
+
+            # Create the figure and axes with a square grid
+            fig: Figure
+            axs: ndarray
+            fig, axs = plt.subplots(
+                grid_size, grid_size, figsize=(grid_size * HEIGHT, grid_size * HEIGHT), squeeze=False
+            )
+
+            i, j = 0, 0
+            for n in range(len(numeric)):
+                axs[i, j].set_title(f"Boxplot for {numeric[n]}")
+                axs[i, j].boxplot(self.data[numeric[n]].dropna().values)
+                i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
+
+            # Remove any empty subplots
+            for ax in axs.flat[num_plots:]:
+                ax.axis('off')
+
+            # Save and display the plot
+            savefig(f"graphs/{self.data_loader.file_tag}_single_boxplots.png")
+            show()
+        else:
+            print("There are no numeric variables.")
 
     def plot_histograms(self):
         """Plots histograms for all numerical variables."""
+        variables_types: dict[str, list] = get_variable_types(self.data)
+        numeric: list[str] = variables_types["numeric"]
+        numeric = [col for col in numeric if pd.api.types.is_numeric_dtype(self.data[col])]
+        if numeric:
+            # Determine the size of the grid
+            num_plots = len(numeric)
+            grid_size = math.ceil(math.sqrt(num_plots))  # Square grid (equal rows and columns)
+
+            # Create the figure and axes with a square grid
+            fig: Figure
+            axs: ndarray
+            fig, axs = plt.subplots(
+                grid_size, grid_size, figsize=(grid_size * HEIGHT, grid_size * HEIGHT), squeeze=False
+            )
+            i: int
+            j: int
+            i, j = 0, 0
+            for n in range(len(numeric)):
+                set_chart_labels(
+                    axs[i, j],
+                    title=f"Histogram for {numeric[n]}",
+                    xlabel=numeric[n],
+                    ylabel="nr records",
+                )
+                axs[i, j].hist(self.data[numeric[n]].dropna().values, "auto")
+                i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
+            savefig(f"graphs/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
+            show()
+        else:
+            print("There are no numeric variables.")
 
     def plot_outliers(self):
         """Plots boxplots for outlier detection."""
@@ -237,6 +310,25 @@ class DataVisualization:
             show()
         else:
             print("Sparsity class: there are no variables.")
+
+    def plot_sparsity_analysis_per_class(self):
+        """Visualizes sparsity in the dataset."""
+
+        data = self.data.dropna()
+        vars: list = data.columns.to_list()
+        if [] != vars:
+
+            n: int = len(vars) - 1
+            fig, axs = subplots(n, n, figsize=(n * HEIGHT, n * HEIGHT), squeeze=False)
+            for i in range(len(vars)):
+                var1: str = vars[i]
+                for j in range(i + 1, len(vars)):
+                    var2: str = vars[j]
+                    plot_multi_scatters_chart(data, var1, var2, self.data_loader.target, ax=axs[i, j - 1])
+            savefig(f"graphs/{self.data_loader.file_tag}_sparsity_per_class_study.png")
+            show()
+        else:
+            print("Sparsity per class: there are no variables.")
 
     def plot_correlation_analysis(self):
         """Displays a correlation heatmap for numerical variables."""
