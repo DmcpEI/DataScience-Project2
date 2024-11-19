@@ -20,14 +20,16 @@ print(data_loader2.data.head())
 data_visualization1 = DataVisualization(data_loader1)
 data_visualization2 = DataVisualization(data_loader2)
 
-data_visualization1.plot_basic_statistics()
-data_visualization2.plot_basic_statistics()
+# Data Dimensionality
+#data_visualization1.plot_records_variables()
+#data_visualization2.plot_records_variables()
+#data_visualization1.plot_variable_types()
+#data_visualization2.plot_variable_types()
+#data_visualization1.plot_missing_values()
+#data_visualization2.plot_missing_values()
 
-data_visualization1.plot_variable_types()
-data_visualization2.plot_variable_types()
+# Data Distribution
 
-data_visualization1.plot_missing_values()
-data_visualization2.plot_missing_values()
+# Data Granularity
 
-data_visualization1.plot_global_boxplots()
-data_visualization2.plot_global_boxplots()
+# Data Sparsity

@@ -28,6 +28,7 @@ class DataLoader:
             target (str): The target of the dataset to load.
         """
         self.filename = filename
+        self.file_tag = filename.split("/")[-1].split(".")[0]
 
         self.data = None
         self.target = target
