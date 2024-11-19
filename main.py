@@ -31,5 +31,9 @@ data_visualization2 = DataVisualization(data_loader2)
 # Data Distribution
 
 # Data Granularity
+#data_visualization1.plot_date_granularity_analysis()
+#data_visualization1.plot_location_granularity_analysis()
 
 # Data Sparsity
+data_visualization1.plot_sparsity_analysis()
+data_visualization2.plot_sparsity_analysis()
