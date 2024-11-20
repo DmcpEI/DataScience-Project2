@@ -21,15 +21,24 @@ data_visualization1 = DataVisualization(data_loader1)
 data_visualization2 = DataVisualization(data_loader2)
 
 # Data Dimensionality
-#data_visualization1.plot_records_variables()
-#data_visualization2.plot_records_variables()
-#data_visualization1.plot_variable_types()
-#data_visualization2.plot_variable_types()
-#data_visualization1.plot_missing_values()
-#data_visualization2.plot_missing_values()
+# data_visualization1.plot_records_variables()
+# data_visualization2.plot_records_variables()
+# data_visualization1.plot_variable_types()
+# data_visualization2.plot_variable_types()
+# data_visualization1.plot_missing_values()
+# data_visualization2.plot_missing_values()
 
 # Data Distribution
-
+# data_visualization1.plot_global_boxplots()
+# data_visualization2.plot_global_boxplots()
+# data_visualization1.plot_single_variable_boxplots()
+# data_visualization2.plot_single_variable_boxplots()
+# data_visualization1.plot_histograms()
+# data_visualization2.plot_histograms()
+# data_visualization1.plot_outlier_comparison()
+# data_visualization2.plot_outlier_comparison()
+data_visualization1.plot_class_distribution("LAW_CAT_CD")
+data_visualization2.plot_class_distribution("CLASS")
 # Data Granularity
 
 # Data Sparsity
