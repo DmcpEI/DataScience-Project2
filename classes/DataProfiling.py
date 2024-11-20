@@ -1,11 +1,13 @@
 import math
 import seaborn as sns
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.pyplot import figure, savefig, show, subplots
 from matplotlib.figure import Figure
+from seaborn import heatmap
 from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
-    plot_multi_scatters_chart, set_chart_labels
+    plot_multi_scatters_chart, set_chart_labels, define_grid
 from numpy import ndarray
 from pandas import Series, DataFrame
 
@@ -140,6 +142,7 @@ class DataProfiling:
         variables_types: dict[str, list] = get_variable_types(self.data)
         numeric: list[str] = variables_types["numeric"]
         numeric = [col for col in numeric if pd.api.types.is_numeric_dtype(self.data[col])]
+
         if numeric:
             # Determine the size of the grid
             num_plots = len(numeric)
@@ -154,25 +157,160 @@ class DataProfiling:
             i: int
             j: int
             i, j = 0, 0
+
             for n in range(len(numeric)):
+                feature = numeric[n]
+                col_data = self.data[feature].dropna()
+
+                # Calculate value range for dynamic bin adjustment
+                value_range = col_data.max() - col_data.min()
+                bins = max(10, min(100, int(value_range / 1000)))  # Dynamic bins: adjust divisor (1000) as needed
+
+                print(f"Processing feature: {feature} | Range: {value_range} | Bins: {bins}")
+
+                # Set labels and plot histogram
                 set_chart_labels(
                     axs[i, j],
-                    title=f"Histogram for {numeric[n]}",
-                    xlabel=numeric[n],
+                    title=f"Histogram for {feature}",
+                    xlabel=feature,
                     ylabel="nr records",
                 )
-                axs[i, j].hist(self.data[numeric[n]].dropna().values, "auto")
+                axs[i, j].hist(col_data.values, bins=bins)  # Use dynamic bins here
+
+                # Update grid indices
                 i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
+
             savefig(f"graphs/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
+            plt.show()
+        else:
+            print("There are no numeric variables.")
+
+        symbolic: list[str] = variables_types["symbolic"] + variables_types["binary"]
+        if [] != symbolic:
+            rows, cols = define_grid(len(symbolic))
+            fig, axs = plt.subplots(
+                rows, cols, figsize=(cols * HEIGHT, rows * HEIGHT), squeeze=False
+            )
+            i, j = 0, 0
+            for n in range(len(symbolic)):
+                counts: Series = self.data[symbolic[n]].value_counts()
+                plot_bar_chart(
+                    counts.index.to_list(),
+                    counts.to_list(),
+                    ax=axs[i, j],
+                    title="Histogram for %s" % symbolic[n],
+                    xlabel=symbolic[n],
+                    ylabel="nr records",
+                    percentage=False,
+                )
+                i, j = (i + 1, 0) if (n + 1) % cols == 0 else (i, j + 1)
+            savefig(f"graphs/{self.data_loader.file_tag}_histograms_symbolic.png")
+            show()
+        else:
+            print("There are no symbolic variables.")
+
+    NR_STDEV: int = 2
+    IQR_FACTOR: float = 1.5
+    HEIGHT = 6  # Adjust as per your grid size and visualization needs
+
+    @staticmethod
+    def determine_outlier_thresholds_for_var(summary5: Series, std_based: bool = True, threshold: float = NR_STDEV
+    ) -> tuple[float, float]:
+        """
+        Determine outlier thresholds for a variable based on IQR or standard deviation.
+        """
+        top: float = 0
+        bottom: float = 0
+        if std_based:
+            std: float = threshold * summary5["std"]
+            top = summary5["mean"] + std
+            bottom = summary5["mean"] - std
+        else:
+            iqr: float = threshold * (summary5["75%"] - summary5["25%"])
+            top = summary5["75%"] + iqr
+            bottom = summary5["25%"] - iqr
+
+        return top, bottom
+
+    @staticmethod
+    def count_outliers(
+            data: pd.DataFrame,
+            numeric: list[str],
+            nrstdev: int = NR_STDEV,
+            iqrfactor: float = IQR_FACTOR,
+    ) -> dict:
+        """
+        Count outliers for numerical variables based on IQR and stdev criteria.
+        """
+        outliers_iqr: list = []
+        outliers_stdev: list = []
+        summary5: pd.DataFrame = data[numeric].describe()
+
+        for var in numeric:
+            # Standard deviation-based thresholds
+            top, bottom = DataProfiling.determine_outlier_thresholds_for_var(
+                summary5[var], std_based=True, threshold=nrstdev
+            )
+            outliers_stdev.append(
+                (data[var] > top).sum() + (data[var] < bottom).sum()
+            )
+
+            # IQR-based thresholds
+            top, bottom = DataProfiling.determine_outlier_thresholds_for_var(
+                summary5[var], std_based=False, threshold=iqrfactor
+            )
+            outliers_iqr.append(
+                (data[var] > top).sum() + (data[var] < bottom).sum()
+            )
+
+        return {"iqr": outliers_iqr, "stdev": outliers_stdev}
+
+    def plot_outlier_comparison(self):
+        """
+        Plot a comparison of outlier counts using IQR and stdev criteria.
+        """
+
+        numeric: list[str] = get_variable_types(self.data)["numeric"]
+        numeric = [col for col in numeric if pd.api.types.is_numeric_dtype(self.data[col])]
+        if numeric:
+            # Count outliers
+            outliers: dict[str, list] = self.count_outliers(self.data, numeric)
+
+            # Create a multibar chart
+            figure(figsize=(12, self.HEIGHT))
+            x = np.arange(len(numeric))
+            width = 0.35
+
+            # Bar plots for IQR and stdev
+            plt.bar(x - width / 2, outliers["iqr"], width, label="IQR")
+            plt.bar(x + width / 2, outliers["stdev"], width, label="Stdev")
+
+            # Add labels and title
+            plt.title("Comparison of Outliers per Variable")
+            plt.xlabel("Variables")
+            plt.ylabel("Number of Outliers")
+            plt.xticks(ticks=x, labels=numeric, rotation=45, ha="right")
+            plt.legend()
+
+            # Save and show the plot
+            savefig(f"graphs/{self.data_loader.file_tag}_outliers_comparison.png")
             show()
         else:
             print("There are no numeric variables.")
 
-    def plot_outliers(self):
-        """Plots boxplots for outlier detection."""
-
     def plot_class_distribution(self):
         """Plots the distribution of the target variable."""
+        values: Series = self.data[self.data_loader.target].value_counts()
+        print(values)
+
+        figure(figsize=(4, 2))
+        plot_bar_chart(
+            values.index.to_list(),
+            values.to_list(),
+            title=f"Target distribution (target={self.data_loader.target})",
+        )
+        savefig(f"graphs/{self.data_loader.file_tag}_class_distribution.png")
+        show()
 
     def _analyse_date_granularity(self, data: DataFrame, var: str, levels: list[str]) -> ndarray:
 
@@ -295,6 +433,59 @@ class DataProfiling:
         savefig(f"graphs/{self.data_loader.file_tag}_granularity_location.png")
         show()
 
+    def plot_law_code_granularity_analysis(self):
+        if self.data.empty:
+            print("No valid LAW_CAT_CD data to analyze.")
+            return
+
+        self._analyse_property_granularity(
+            self.data,
+            "law code",
+            ["OFNS_DESC", "PD_DESC", "LAW_CODE"]
+        )
+
+        savefig(f"graphs/{self.data_loader.file_tag}_granularity_law_code.png")
+        show()
+
+    def plot_borough_granularity_analysis(self):
+        """
+        Analyzes the granularity of race variables.
+        """
+        # Analyze granularity of the race variable
+        self._analyse_property_granularity(
+            self.data,
+            "borough",
+            ["ARREST_BORO"]
+        )
+        savefig(f"graphs/{self.data_loader.file_tag}_granularity_borough.png")
+        show()
+
+    def plot_age_granularity_analysis(self):
+        """
+        Analyzes the granularity of race variables.
+        """
+        # Analyze granularity of the race variable
+        self._analyse_property_granularity(
+            self.data,
+            "age",
+            ["AGE_GROUP"]
+        )
+        savefig(f"graphs/{self.data_loader.file_tag}_granularity_age.png")
+        show()
+
+    def plot_race_granularity_analysis(self):
+        """
+        Analyzes the granularity of race variables.
+        """
+        # Analyze granularity of the race variable
+        self._analyse_property_granularity(
+            self.data,
+            "race",
+            ["PERP_RACE"]
+        )
+        savefig(f"graphs/{self.data_loader.file_tag}_granularity_race.png")
+        show()
+
     def plot_sparsity_analysis(self):
         """Visualizes sparsity in the dataset."""
 
@@ -336,5 +527,27 @@ class DataProfiling:
         else:
             print("Sparsity per class: there are no variables.")
 
-    def plot_correlation_analysis(self):
-        """Displays a correlation heatmap for numerical variables."""
+    def plot_correlation_analysis(self, dpi=300, figsize=(15, 15)):
+        """
+        Displays a correlation heatmap for all variables in the dataset.
+
+        Parameters:
+            dpi (int): Dots per inch for the output image resolution.
+            figsize (tuple): Size of the figure in inches (width, height).
+        """
+        # Compute the correlation matrix for all columns
+        corr_mtx: DataFrame = self.data.corr().abs()
+
+        # Increase figure size and resolution
+        figure(figsize=figsize, dpi=dpi)
+        heatmap(
+            corr_mtx,
+            xticklabels=corr_mtx.columns,
+            yticklabels=corr_mtx.columns,
+            annot=False,
+            cmap="Blues",
+            vmin=0,
+            vmax=1,
+        )
+        savefig(f"graphs/{self.data_loader.file_tag}_correlation_analysis.png", dpi=dpi)
+        show()
