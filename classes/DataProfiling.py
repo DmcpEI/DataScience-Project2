@@ -1,15 +1,16 @@
 import math
-import seaborn as sns
 import pandas as pd
+from pandas import Series, DataFrame
 import numpy as np
+from numpy import ndarray
 from matplotlib import pyplot as plt
 from matplotlib.pyplot import figure, savefig, show, subplots
 from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from seaborn import heatmap
+from scipy.stats import norm, expon, lognorm
 from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
     plot_multi_scatters_chart, set_chart_labels, define_grid
-from numpy import ndarray
-from pandas import Series, DataFrame
 
 class DataProfiling:
     """
@@ -180,7 +181,7 @@ class DataProfiling:
                 # Update grid indices
                 i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
 
-            savefig(f"graphs/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
+            savefig(f"graphs/{self.data_loader.file_tag}_single_histograms_numeric.png")
             plt.show()
         else:
             print("There are no numeric variables.")
@@ -204,10 +205,79 @@ class DataProfiling:
                     percentage=False,
                 )
                 i, j = (i + 1, 0) if (n + 1) % cols == 0 else (i, j + 1)
-            savefig(f"graphs/{self.data_loader.file_tag}_histograms_symbolic.png")
+            savefig(f"graphs/{self.data_loader.file_tag}_single_histograms_symbolic.png")
             show()
         else:
             print("There are no symbolic variables.")
+
+    def compute_known_distributions(self, x_values: list) -> dict:
+        distributions = dict()
+        # Gaussian
+        mean, sigma = norm.fit(x_values)
+        distributions["Normal(%.1f,%.2f)" % (mean, sigma)] = norm.pdf(x_values, mean, sigma)
+        # Exponential
+        loc, scale = expon.fit(x_values)
+        distributions["Exp(%.2f)" % (1 / scale)] = expon.pdf(x_values, loc, scale)
+        # LogNorm
+        sigma, loc, scale = lognorm.fit(x_values)
+        distributions["LogNor(%.1f,%.2f)" % (math.log(scale), sigma)] = lognorm.pdf(
+            x_values, sigma, loc, scale
+        )
+        return distributions
+
+    def histogram_with_distributions(self, ax: Axes, series: Series, var: str):
+        values: list = series.sort_values().to_list()
+        ax.hist(values, bins=20, density=True, alpha=0.6, label="Data")
+        distributions: dict = self.compute_known_distributions(values)
+        for label, dist in distributions.items():
+            ax.plot(values, dist, label=label)
+        ax.set_title(f"Best fit for {var}")
+        ax.set_xlabel(var)
+        ax.set_ylabel("Density")
+        ax.legend()
+
+    def plot_histograms_distribution(self):
+
+        """Plots histograms for all numerical variables and fits known distributions."""
+        variables_types: dict[str, list] = get_variable_types(self.data)
+        numeric: list[str] = variables_types["numeric"]
+        numeric = [col for col in numeric if pd.api.types.is_numeric_dtype(self.data[col])]
+
+        if numeric:
+            # Determine the size of the grid
+            num_plots = len(numeric)
+            grid_size = math.ceil(math.sqrt(num_plots))  # Square grid (equal rows and columns)
+
+            # Create the figure and axes with a square grid
+            fig: Figure
+            axs: ndarray
+            fig, axs = plt.subplots(
+                grid_size, grid_size, figsize=(grid_size * HEIGHT, grid_size * HEIGHT), squeeze=False
+            )
+            i: int
+            j: int
+            i, j = 0, 0
+
+            for n in range(len(numeric)):
+                feature = numeric[n]
+                col_data = self.data[feature].dropna()
+
+                print(f"Processing feature: {feature}")
+
+                # Plot histogram and distributions
+                self.histogram_with_distributions(axs[i, j], col_data, feature)
+
+                # Update grid indices
+                i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
+
+            # Remove any empty subplots
+            for ax in axs.flat[num_plots:]:
+                ax.axis("off")
+
+            savefig(f"graphs/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
+            plt.show()
+        else:
+            print("There are no numeric variables.")
 
     NR_STDEV: int = 2
     IQR_FACTOR: float = 1.5
