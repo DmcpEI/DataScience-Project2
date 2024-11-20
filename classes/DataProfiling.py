@@ -288,7 +288,9 @@ class DataProfiling:
         self._analyse_property_granularity(
             data,
             "location",
-            ["Hemisphere", "Latitude Degrees", "Longitude Degrees"]
+            ["Hemisphere", "Latitude Degrees", "Longitude Degrees",
+             "Latitude Minutes", "Longitude Minutes",
+             "Latitude Seconds", "Longitude Seconds"]
         )
         savefig(f"graphs/{self.data_loader.file_tag}_granularity_location.png")
         show()

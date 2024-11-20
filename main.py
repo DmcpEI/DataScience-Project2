@@ -1,5 +1,8 @@
+# %% Class Imports
 from classes.DataLoader import DataManipulator
 from classes.DataProfiling import DataProfiling
+
+# %% 0- Data Loading
 
 # Load the data
 path_dataset1_class = "data/class_ny_arrests.csv"
@@ -11,6 +14,8 @@ data_loader2 = DataManipulator(path_dataset2_class, "CLASS")
 # Display the data
 print(data_loader1.data.head())
 print(data_loader2.data.head())
+
+# %% 1- Data Profiling
 
 # Data Encoding
 
@@ -36,10 +41,12 @@ data_profiling2 = DataProfiling(data_loader2)
 
 # Data Granularity
 # data_profiling1.plot_date_granularity_analysis()
-# data_profiling1.plot_location_granularity_analysis()
+data_profiling1.plot_location_granularity_analysis()
 
 # Data Sparsity
 # data_profiling1.plot_sparsity_analysis()
 # data_profiling2.plot_sparsity_analysis()
 # data_profiling1.plot_sparsity_analysis_per_class()
 # data_profiling2.plot_sparsity_analysis_per_class()
+
+# %% 2- Data Processing
