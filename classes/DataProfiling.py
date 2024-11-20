@@ -9,25 +9,29 @@ from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_var
 from numpy import ndarray
 from pandas import Series, DataFrame
 
-class DataVisualization:
+class DataProfiling:
     """
-    A class for visualizing data using various plot types.
+    DataProfiling class for visualizing data profiling results.
 
-    Parameters:
-        data_loader (DataLoader): A DataLoader object that provides access to the data.
+    Attributes:
+        data_loader (DataLoader): The DataLoader object used to load the data.
+        data (DataFrame): The dataset to visualize.
+        target (str): The target variable in the dataset.
 
     Methods:
-        plot_basic_statistics(): Plots basic statistics like number of records and variables.
-        plot_variable_types(): Plots the distribution of variable types.
-        plot_missing_values(): Visualizes missing values in the dataset.
-        plot_global_boxplots(): Plots global boxplots for numerical variables.
-        plot_single_variable_boxplots(): Plots individual boxplots for numerical variables.
-        plot_histograms(): Plots histograms for numerical variables.
-        plot_outliers(): Visualizes outliers using boxplots.
-        plot_class_distribution(): Plots the class distribution.
-        plot_granularity_analysis(): Analyzes unique values per variable.
-        plot_sparsity_analysis(): Visualizes sparsity in the dataset.
-        plot_correlation_analysis(): Displays a correlation heatmap.
+        plot_records_variables: Plots number of records and variables.
+        plot_variable_types: Plots the distribution of variable types.
+        plot_missing_values: Plots the number of missing values in the dataset.
+        plot_global_boxplots: Plots boxplots for all numerical variables.
+        plot_single_variable_boxplots: Plots boxplots for each numerical variable.
+        plot_histograms: Plots histograms for all numerical variables.
+        plot_outliers: Plots boxplots for outlier detection.
+        plot_class_distribution: Plots the distribution of the target variable.
+        plot_date_granularity_analysis: Analyzes the granularity of date variables.
+        plot_location_granularity_analysis: Analyzes the granularity of location variables.
+        plot_sparsity_analysis: Visualizes sparsity in the dataset.
+        plot_sparsity_analysis_per_class: Visualizes sparsity in the dataset per class.
+        plot_correlation_analysis: Displays a correlation heatmap for numerical variables.
     """
 
     def __init__(self, data_loader):
