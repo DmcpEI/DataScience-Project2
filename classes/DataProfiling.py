@@ -210,7 +210,7 @@ class DataProfiling:
         else:
             print("There are no symbolic variables.")
 
-    def compute_known_distributions(self, x_values: list) -> dict:
+    def _compute_known_distributions(self, x_values: list) -> dict:
         distributions = dict()
         # Gaussian
         mean, sigma = norm.fit(x_values)
@@ -228,7 +228,7 @@ class DataProfiling:
     def histogram_with_distributions(self, ax: Axes, series: Series, var: str):
         values: list = series.sort_values().to_list()
         ax.hist(values, bins=20, density=True, alpha=0.6, label="Data")
-        distributions: dict = self.compute_known_distributions(values)
+        distributions: dict = self._compute_known_distributions(values)
         for label, dist in distributions.items():
             ax.plot(values, dist, label=label)
         ax.set_title(f"Best fit for {var}")

@@ -9,6 +9,15 @@ class DataProcessing:
         self.data = self.data_loader.data
         self.target = self.data_loader.target
 
+    def group_AGE_GROUP(self):
+        """
+        Group the AGE_GROUP outliers into 'UNKNOWN'.
+        """
+        # Define valid AGE_GROUP values
+        valid_age_groups = {'<18', '18-24', '25-44', '45-64', '65+'}
+        # Replace outliers with 'UNKNOWN'
+        self.data['AGE_GROUP'] = self.data['AGE_GROUP'].where(self.data['AGE_GROUP'].isin(valid_age_groups), 'UNKNOWN')
+
     def _encode_ARREST_DATE(self):
         """Encode the ARREST_DATE variable"""
         # Convert ARREST_DATE to datetime format (assuming the format is mm/dd/yyyy)
@@ -59,15 +68,9 @@ class DataProcessing:
         self.data['ARREST_BORO'] = self.data['ARREST_BORO'].map({'M': 1, 'B': 2, 'Q': 3, 'K': 4, 'S': 5})
 
     def _encode_AGE_GROUP(self):
-        """
-        Encodes the age group variable, mapping specific groups to integers
-        and assigning 'unknown' to all other values.
-        """
-        # Mapping for known age groups
-        age_group_mapping = {'<18': 1, '18-24': 2, '25-44': 3, '45-64': 4, '65+': 5}
 
-        # Map known age groups and set others as 'unknown' (e.g., 0)
-        self.data['AGE_GROUP'] = self.data['AGE_GROUP'].map(age_group_mapping).fillna(0).astype(int)
+        age_group_mapping = {'UNKNOWN': 0, '<18': 1, '18-24': 2, '25-44': 3, '45-64': 4, '65+': 5}
+        self.data['AGE_GROUP'] = self.data['AGE_GROUP'].map(age_group_mapping)
 
     def _encode_PERP_SEX(self):
         # Encode the perpetrator's sex variable

@@ -18,6 +18,11 @@ print(data_loader2.data.head())
 
 # %% 1- Data Profiling
 
+data_processing1 = DataProcessing(data_loader1)
+data_processing2 = DataProcessing(data_loader2)
+
+data_processing1.group_AGE_GROUP()
+
 # Data Visualization
 data_profiling1 = DataProfiling(data_loader1)
 data_profiling2 = DataProfiling(data_loader2)
@@ -35,10 +40,10 @@ data_profiling2 = DataProfiling(data_loader2)
 # data_profiling2.plot_global_boxplots()
 # data_profiling1.plot_single_variable_boxplots()
 # data_profiling2.plot_single_variable_boxplots()
-data_profiling1.plot_histograms()
-data_profiling2.plot_histograms()
-data_profiling1.plot_histograms_distribution()
-data_profiling2.plot_histograms_distribution()
+# data_profiling1.plot_histograms()
+# data_profiling2.plot_histograms()
+# data_profiling1.plot_histograms_distribution()
+# data_profiling2.plot_histograms_distribution()
 # data_profiling1.plot_outlier_comparison()
 # data_profiling2.plot_outlier_comparison()
 # data_profiling1.plot_class_distribution()
@@ -59,13 +64,11 @@ data_profiling2.plot_histograms_distribution()
 # data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
-data_processing1 = DataProcessing(data_loader1)
 data_processing1.encode_NY_ARRESTS()
 # Save the encoded data
 data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
 
 # Data Correlation
-# data_profiling1 = DataProfiling(data_loader1)
 # data_profiling1.plot_correlation_analysis()
 # data_profiling2.plot_correlation_analysis()
 
