@@ -55,7 +55,7 @@ class DataProfiling:
         plot_bar_chart(
             list(values.keys()), list(values.values()), title="Nº of records vs Nº variables"
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_records_variables.png")
+        savefig(f"graphs/data_profiling/data_dimensionality/{self.data_loader.file_tag}_records_variables.png")
         show()
 
     def plot_variable_types(self):
@@ -70,7 +70,7 @@ class DataProfiling:
         plot_bar_chart(
             list(counts.keys()), list(counts.values()), title="Nº of variables per type"
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_variable_types.png")
+        savefig(f"graphs/data_profiling/data_dimensionality/{self.data_loader.file_tag}_variable_types.png")
         show()
 
     def plot_missing_values(self):
@@ -89,7 +89,7 @@ class DataProfiling:
             xlabel="variables",
             ylabel="nr missing values",
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_mv.png")
+        savefig(f"graphs/data_profiling/data_dimensionality/{self.data_loader.file_tag}_mv.png")
         show()
 
     def plot_global_boxplots(self):
@@ -100,7 +100,7 @@ class DataProfiling:
         if [] != numeric:
             figure(figsize=(8, 7))
             self.data[numeric].boxplot(rot=45)
-            savefig(f"graphs/{self.data_loader.file_tag}_global_boxplot.png")
+            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_global_boxplot.png")
             show()
         else:
             print("There are no numeric variables.")
@@ -133,7 +133,7 @@ class DataProfiling:
                 ax.axis('off')
 
             # Save and display the plot
-            savefig(f"graphs/{self.data_loader.file_tag}_single_boxplots.png")
+            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_single_boxplots.png")
             show()
         else:
             print("There are no numeric variables.")
@@ -181,7 +181,7 @@ class DataProfiling:
                 # Update grid indices
                 i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
 
-            savefig(f"graphs/{self.data_loader.file_tag}_single_histograms_numeric.png")
+            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_single_histograms_numeric.png")
             plt.show()
         else:
             print("There are no numeric variables.")
@@ -205,7 +205,7 @@ class DataProfiling:
                     percentage=False,
                 )
                 i, j = (i + 1, 0) if (n + 1) % cols == 0 else (i, j + 1)
-            savefig(f"graphs/{self.data_loader.file_tag}_single_histograms_symbolic.png")
+            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_single_histograms_symbolic.png")
             show()
         else:
             print("There are no symbolic variables.")
@@ -274,7 +274,7 @@ class DataProfiling:
             for ax in axs.flat[num_plots:]:
                 ax.axis("off")
 
-            savefig(f"graphs/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
+            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
             plt.show()
         else:
             print("There are no numeric variables.")
@@ -363,7 +363,7 @@ class DataProfiling:
             plt.legend()
 
             # Save and show the plot
-            savefig(f"graphs/{self.data_loader.file_tag}_outliers_comparison.png")
+            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_outliers_comparison.png")
             show()
         else:
             print("There are no numeric variables.")
@@ -379,7 +379,7 @@ class DataProfiling:
             values.to_list(),
             title=f"Target distribution (target={self.data_loader.target})",
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_class_distribution.png")
+        savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_class_distribution.png")
         show()
 
     def _analyse_date_granularity(self, data: DataFrame, var: str, levels: list[str]) -> ndarray:
@@ -411,7 +411,7 @@ class DataProfiling:
 
         for v_date in variables_types["date"]:
             self._analyse_date_granularity(self.data, v_date, ["year", "quarter", "month", "day"])
-            savefig(f"graphs/{self.data_loader.file_tag}_granularity_{v_date}.png")
+            savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_{v_date}.png")
             show()
 
     def _decompose_lat_lon(self, data: DataFrame) -> DataFrame:
@@ -500,7 +500,7 @@ class DataProfiling:
              "Latitude Minutes", "Longitude Minutes",
              "Latitude Seconds", "Longitude Seconds"]
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_granularity_location.png")
+        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_location.png")
         show()
 
     def plot_law_code_granularity_analysis(self):
@@ -514,7 +514,7 @@ class DataProfiling:
             ["OFNS_DESC", "PD_DESC", "LAW_CODE"]
         )
 
-        savefig(f"graphs/{self.data_loader.file_tag}_granularity_law_code.png")
+        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_law_code.png")
         show()
 
     def plot_borough_granularity_analysis(self):
@@ -527,7 +527,7 @@ class DataProfiling:
             "borough",
             ["ARREST_BORO"]
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_granularity_borough.png")
+        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_borough.png")
         show()
 
     def plot_age_granularity_analysis(self):
@@ -540,7 +540,7 @@ class DataProfiling:
             "age",
             ["AGE_GROUP"]
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_granularity_age.png")
+        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_age.png")
         show()
 
     def plot_race_granularity_analysis(self):
@@ -553,7 +553,7 @@ class DataProfiling:
             "race",
             ["PERP_RACE"]
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_granularity_race.png")
+        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_race.png")
         show()
 
     def plot_sparsity_analysis(self):
@@ -573,7 +573,7 @@ class DataProfiling:
                 for j in range(i + 1, len(vars)):
                     var2: str = vars[j]
                     plot_multi_scatters_chart(data, var1, var2, ax=axs[i, j - 1])
-            savefig(f"graphs/{self.data_loader.file_tag}_sparsity_study.png")
+            savefig(f"graphs/data_profiling/data_sparsity/{self.data_loader.file_tag}_sparsity_study.png")
             show()
         else:
             print("Sparsity class: there are no variables.")
@@ -592,7 +592,7 @@ class DataProfiling:
                 for j in range(i + 1, len(vars)):
                     var2: str = vars[j]
                     plot_multi_scatters_chart(data, var1, var2, self.data_loader.target, ax=axs[i, j - 1])
-            savefig(f"graphs/{self.data_loader.file_tag}_sparsity_per_class_study.png")
+            savefig(f"graphs/data_profiling/data_sparsity/{self.data_loader.file_tag}_sparsity_per_class_study.png")
             show()
         else:
             print("Sparsity per class: there are no variables.")
@@ -619,5 +619,5 @@ class DataProfiling:
             vmin=0,
             vmax=1,
         )
-        savefig(f"graphs/{self.data_loader.file_tag}_correlation_analysis.png", dpi=dpi)
+        savefig(f"graphs/data_profiling/data_sparsity/{self.data_loader.file_tag}_correlation_analysis.png", dpi=dpi)
         show()
