@@ -1,4 +1,6 @@
 # %% Class Imports
+import pandas as pd
+
 from classes.DataLoader import DataManipulator
 from classes.DataProfiling import DataProfiling
 from classes.DataProcessing import DataProcessing
@@ -21,7 +23,7 @@ print(data_loader2.data.head())
 data_processing1 = DataProcessing(data_loader1)
 data_processing2 = DataProcessing(data_loader2)
 
-data_processing1.group_AGE_GROUP()
+# data_processing1.group_AGE_GROUP()
 
 # Data Visualization
 data_profiling1 = DataProfiling(data_loader1)
@@ -64,12 +66,32 @@ data_profiling2 = DataProfiling(data_loader2)
 # data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
-data_processing1.encode_NY_ARRESTS()
+data_processing1.encode_variables()
 # Save the encoded data
-data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
+# data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
 
 # Data Correlation
 # data_profiling1.plot_correlation_analysis()
 # data_profiling2.plot_correlation_analysis()
 
 # %% 2- Data Processing
+
+# Handle Missing Values
+#data_processing1.handle_missing_values()
+#data_processing2.handle_missing_values()
+
+# Save the data
+#data_loader1.data.to_csv("data/class_ny_arrests_MV.csv", index=False)
+#data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
+
+data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
+data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
+
+# Handle Outliers
+data_processing1.handle_outliers()
+data_processing2.handle_outliers()
+
+# Save the data
+data_loader1.data.to_csv("data/class_ny_arrests_OUTLIERS.csv", index=False)
+data_loader2.data.to_csv("data/class_financial_distress_OUTLIERS.csv", index=False)
+
