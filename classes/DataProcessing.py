@@ -1,5 +1,8 @@
+import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
+from pandas import read_csv, DataFrame, Series
+from matplotlib.pyplot import subplots, show
+from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
@@ -34,6 +37,12 @@ class DataProcessing:
         self.data_loader.data['ARREST_DAYOFWEEK'] = arrest_date.dt.dayofweek
         self.data_loader.data.drop(columns=['ARREST_DATE'], inplace=True)
 
+        # Cyclic Encoding for ARREST_DAYOFWEEK
+        print("Applying cyclic encoding to ARREST_DAYOFWEEK...")
+        self.data_loader.data['ARREST_DAYOFWEEK_SIN'] = np.sin(2 * np.pi * self.data_loader.data['ARREST_DAYOFWEEK'] / 7)
+        self.data_loader.data['ARREST_DAYOFWEEK_COS'] = np.cos(2 * np.pi * self.data_loader.data['ARREST_DAYOFWEEK'] / 7)
+        self.data_loader.data.drop(columns=['ARREST_DAYOFWEEK'], inplace=True)  # Drop original column
+
         # Encode PD_DESC
         print("Encoding PD_DESC...")
         self.data_loader.data['PD_DESC'] = self.data_loader.data['PD_DESC'].fillna("UNKNOWN").apply(
@@ -57,9 +66,9 @@ class DataProcessing:
             'ARREST_BORO': {'M': 1, 'B': 2, 'Q': 3, 'K': 4, 'S': 5},
             'PERP_SEX': {'M': 1, 'F': 0},
             'PERP_RACE': {
-                'UNKNOWN': 0, 'BLACK': 1, 'WHITE HISPANIC': 2, 'WHITE': 3,
-                'BLACK HISPANIC': 4, 'ASIAN / PACIFIC ISLANDER': 5,
-                'AMERICAN INDIAN/ALASKAN NATIVE': 6, 'OTHER': 7
+                'UNKNOWN': 0, 'BLACK': 1, 'BLACK HISPANIC': 2, 'ASIAN / PACIFIC ISLANDER': 3,
+                'AMERICAN INDIAN/ALASKAN NATIVE': 4, 'WHITE HISPANIC': 5,
+                'WHITE': 6, 'OTHER': 7
             }
         }
 
@@ -73,11 +82,17 @@ class DataProcessing:
         Drop variables that are false predictions or irrelevant
         """
         if self.data_loader.target == "LAW_CAT_CD":
-            # Drop variables that are false predictions or irrelevant
+
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
-            print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification.")
+            print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification task.")
+
+            self.data_loader.data.drop(columns=['PD_CD'], inplace=True)
+            print("\nDropped 'PD_CD' variable for being highly correlated with the 'KY_CD' variable.")
+
+            self.data_loader.data.drop(columns=['PD_DESC'], inplace=True)
+            print("\nDropped 'PD_DESC' variable for being highly correlated with the 'OFNS_DESC' variable.")
         elif self.data_loader.target == "CLASS":
-            # Drop variables that are false predictions or irrelevant
+
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
             print("\nDropped 'Financial Distress' variable for being a false predictor.")
 
@@ -247,3 +262,68 @@ class DataProcessing:
             self.data_loader.data = pd.concat([X_iqr_removed, y_iqr_removed], axis=1)
 
         print("Outlier handling completed.")
+
+    def handle_scaling(self):
+        """
+        Handles scaling using different techniques and selects the best-performing one.
+        The evaluated techniques are:
+        - Standard Scaler
+        - MinMax Scaler
+        """
+        data = self.data_loader.data
+        target = self.data_loader.target
+
+        X = self.data_loader.data.drop(columns=[self.target])
+        y = self.data_loader.data[self.target]
+
+        target_data: Series = data.pop(target)
+        vars: list[str] = data.columns.to_list()
+        vars.append(target)
+
+        print("\nHandling scaling...")
+
+        # List to store results for different techniques
+        techniques = {}
+
+        # TODO: Calculate KNN for original data to check if scaling improves or not
+
+        # Standard Scaler
+        transf: StandardScaler = StandardScaler(with_mean=True, with_std=True, copy=True).fit(data)
+        df_zscore = DataFrame(transf.transform(data), index=data.index)
+        df_zscore[target] = target_data
+        df_zscore.columns = vars
+
+        results_standard = self.evaluate_step(df_zscore.drop(columns=[target]), df_zscore[target])
+        print(f"Standard Scaler performance: {results_standard}")
+        techniques['Standard'] = results_standard
+
+        # MinMax Scaler
+        transf: MinMaxScaler = MinMaxScaler(feature_range=(0, 1), copy=True).fit(data)
+        df_minmax = DataFrame(transf.transform(data), index=data.index)
+        df_minmax[target] = target_data
+        df_minmax.columns = vars
+
+        results_minmax = self.evaluate_step(df_minmax.drop(columns=[target]), df_minmax[target])
+        print(f"MinMax Scaler performance: {results_minmax}")
+        techniques['MinMax'] = results_minmax
+
+        # Compare techniques and choose the best one
+        best_technique = max(techniques, key=lambda k: techniques[k]['knn'])
+        print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
+
+        # Apply the best technique to the dataset
+        if best_technique == 'Standard':
+            self.data_loader.data = df_zscore
+        elif best_technique == 'MinMax':
+            self.data_loader.data = df_minmax
+
+        print("Scaling handling completed.")
+
+        fig, axs = subplots(1, 3, figsize=(20, 10), squeeze=False)
+        axs[0, 1].set_title("Original data")
+        data.boxplot(ax=axs[0, 0])
+        axs[0, 0].set_title("Z-score normalization")
+        df_zscore.boxplot(ax=axs[0, 1])
+        axs[0, 2].set_title("MinMax normalization")
+        df_minmax.boxplot(ax=axs[0, 2])
+        show()

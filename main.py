@@ -77,27 +77,32 @@ data_processing1.encode_variables()
 # %% 2- Data Processing
 
 # Drop False Predictors
-data_processing1.drop_variables()
-data_processing2.drop_variables()
+# data_processing1.drop_variables()
+# data_processing2.drop_variables()
 
 # Handle Missing Values
 # data_processing1.handle_missing_values()
 # data_processing2.handle_missing_values()
 
 # Save the data
-data_loader1.data.to_csv("data/class_ny_arrests_MV.csv", index=False)
-data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
-
+# data_loader1.data.to_csv("data/class_ny_arrests_MV.csv", index=False)
+# data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
 # data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
 # data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
 
 # Handle Outliers
-data_processing1.handle_outliers()
-data_processing2.handle_outliers()
+# data_processing1.handle_outliers()
+# data_processing2.handle_outliers()
 
 # Save the data
-data_loader1.data.to_csv("data/class_ny_arrests_OUTLIERS.csv", index=False)
-data_loader2.data.to_csv("data/class_financial_distress_OUTLIERS.csv", index=False)
+# data_loader1.data.to_csv("data/class_ny_arrests_OUTLIERS.csv", index=False)
+# data_loader2.data.to_csv("data/class_financial_distress_OUTLIERS.csv", index=False)
+data_loader1.data = pd.read_csv("data/class_ny_arrests_OUTLIERS.csv")
+data_loader2.data = pd.read_csv("data/class_financial_distress_OUTLIERS.csv")
+
+# Handle Scaling
+data_processing1.handle_scaling()
+data_processing2.handle_scaling()
 
 
 
