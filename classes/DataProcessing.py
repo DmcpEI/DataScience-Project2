@@ -1,5 +1,3 @@
-from unittest.mock import inplace
-
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import SimpleImputer
@@ -74,14 +72,14 @@ class DataProcessing:
         """
         Drop variables that are false predictions or irrelevant
         """
-        if self.data_loader.target == "CLASS":
+        if self.data_loader.target == "LAW_CAT_CD":
             # Drop variables that are false predictions or irrelevant
-
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
             print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification.")
-
+        elif self.data_loader.target == "CLASS":
+            # Drop variables that are false predictions or irrelevant
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
-            print("Dropped 'Financial Distress' variable for being a false predictor.")
+            print("\nDropped 'Financial Distress' variable for being a false predictor.")
 
     def evaluate_step(self, X, y, test_size=0.3):
         """
