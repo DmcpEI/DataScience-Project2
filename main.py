@@ -1,5 +1,6 @@
 # %% Class Imports
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from classes.DataLoader import DataManipulator
 from classes.DataProfiling import DataProfiling
@@ -94,6 +95,17 @@ data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
 # data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
 # data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
 
+# Data Splitting
+X1 = data_loader1.data.drop(columns=["LAW_CAT_CD"])
+y1 = data_loader1.data["LAW_CAT_CD"]
+X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y1, test_size=0.3, random_state=42)
+data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test = X1_train, y1_train, X1_test, y1_test
+
+X2 = data_loader2.data.drop(columns=["CLASS"])
+y2 = data_loader2.data["CLASS"]
+X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.3, random_state=42)
+data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test = X2_train, y2_train, X2_test, y2_test
+
 # Handle Outliers
 data_processing1.handle_outliers()
 data_processing2.handle_outliers()
@@ -105,12 +117,12 @@ data_loader2.data.to_csv("data/class_financial_distress_OUTLIERS.csv", index=Fal
 # data_loader2.data = pd.read_csv("data/class_financial_distress_OUTLIERS.csv")
 
 # Handle Scaling
-data_processing1.handle_scaling()
-data_processing2.handle_scaling()
+# data_processing1.handle_scaling()
+# data_processing2.handle_scaling()
 
 # Save the data
-data_loader1.data.to_csv("data/class_ny_arrests_SCALED.csv", index=False)
-data_loader2.data.to_csv("data/class_financial_distress_SCALED.csv", index=False)
+# data_loader1.data.to_csv("data/class_ny_arrests_SCALED.csv", index=False)
+# data_loader2.data.to_csv("data/class_financial_distress_SCALED.csv", index=False)
 # data_loader1.data = pd.read_csv("data/class_ny_arrests_SCALED.csv")
 # data_loader2.data = pd.read_csv("data/class_financial_distress_SCALED.csv")
 
