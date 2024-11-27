@@ -100,9 +100,11 @@ data_processing1.encode_variables()
 data_loader1.data = pd.read_csv("data/class_ny_arrests_OUTLIERS.csv")
 data_loader2.data = pd.read_csv("data/class_financial_distress_OUTLIERS.csv")
 
+
 # Handle Scaling
-data_processing1.handle_scaling()
-data_processing2.handle_scaling()
-
-
+# data_processing1.handle_scaling()
+# data_processing2.handle_scaling()
+# feature selection
+#data_processing1.handle_feature_selection()
+data_processing2.handle_feature_selection()
 

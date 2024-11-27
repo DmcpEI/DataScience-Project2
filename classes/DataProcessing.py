@@ -1,13 +1,18 @@
+from math import ceil
+
 import numpy as np
 import pandas as pd
-from pandas import read_csv, DataFrame, Series
-from matplotlib.pyplot import subplots, show
+from pandas import read_csv, DataFrame, Series, Index
+from matplotlib.pyplot import subplots, show, figure, savefig
 from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
+
+from dslabs_functions import plot_multiline_chart, HEIGHT
+
 
 class DataProcessing:
 
@@ -327,3 +332,117 @@ class DataProcessing:
         axs[0, 2].set_title("MinMax normalization")
         df_minmax.boxplot(ax=axs[0, 2])
         show()
+
+
+    def handle_feature_selection(self):
+        #split the dataset into train and test
+        X = self.data_loader.data.drop(columns=[self.target])
+        y = self.data_loader.data[self.target]
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        vars_to_drop = self.select_low_variance_variables(max_threshold=3)
+        print(f"Variables to drop: {vars_to_drop}")
+        self.study_variance(X_train, X_test, y_train, y_test, max_threshold=3, lag=0.1, metric="accuracy", file_tag="ny_arrests_variance")
+        #self.apply_feature_selection(vars_to_drop, file_tag="ny_arrests_feature_selection")
+
+    def select_low_variance_variables(self, max_threshold: float) -> list[str]:
+            """
+            Identifies low-variance variables to drop based on the threshold.
+            :param max_threshold: Maximum variance threshold for feature selection.
+            :return: List of variable names to drop.
+            """
+            data: DataFrame = self.data_loader.data
+            summary5: DataFrame = data.describe()
+            vars2drop: Index[str] = summary5.columns[
+                summary5.loc["std"] * summary5.loc["std"] < max_threshold
+                ]
+            vars2drop = vars2drop.drop(self.target) if self.target in vars2drop else vars2drop
+            return list(vars2drop.values)
+
+    def study_variance(self, X_train: DataFrame, X_test: DataFrame, y_train: DataFrame, y_test: DataFrame, max_threshold: float = 1, lag: float = 0.05,
+                       metric: str = "accuracy", file_tag: str = ""):
+        """
+        Studies the impact of low variance thresholds on model performance.
+
+        :param max_threshold: Maximum variance threshold to test.
+        :param lag: Step size for thresholds.
+        :param metric: Evaluation metric (e.g., accuracy, recall).
+        :param file_tag: Tag to use for saving the plot file.
+        """
+
+        # Generate a list of threshold options to test the impact of different thresholds
+        threshold_options: list[float] = [
+            round(i * lag, 3) for i in range(1, ceil(max_threshold / lag + lag))
+        ]
+        results: dict[str, dict[float, list]] = {"NB": {}, "KNN": {}}  # Dictionary to store results
+        summary: DataFrame = X_train.describe()  # Get summary statistics of the training data
+
+        # Iterate over each threshold option
+        for thresh in threshold_options:
+            # Identify variables with variance below the threshold
+            vars2drop: Index[str] = summary.columns[
+                summary.loc["std"] * summary.loc["std"] < thresh
+                ]
+            #if the target is in the variables to drop, remove it from that list
+            if self.target in vars2drop:
+                vars2drop = vars2drop.drop(self.target)
+
+            # Drop the low variance variables from the training and testing datasets
+            X_train_processed: DataFrame = X_train.drop(vars2drop, axis=1, inplace=False)
+            X_test_processed: DataFrame = X_test.drop(vars2drop, axis=1, inplace=False)
+
+            X_combined = pd.concat([X_train_processed, X_test_processed], axis=0)
+            y_combined = pd.concat([y_train, y_test], axis=0)
+
+            # Evaluate the model performance with the selected variables
+            eval: dict[str, list] | None = self.evaluate_step(
+                X_combined, y_combined
+            )
+            if eval:
+                results["NB"][thresh] = eval['nb']
+                results["KNN"][thresh] = eval['knn']
+
+            print(results)
+
+        # Prepare lists for each model
+        nb_metrics = []
+        knn_metrics = []
+        for threshold in threshold_options:
+            # For each threshold, get the corresponding metric value for Naive Bayes and KNN
+            nb_metrics.append(results["NB"].get(threshold, None))  # Directly append the value if it's a float
+            knn_metrics.append(results["KNN"].get(threshold, None))  # Same for KNN
+
+        # Plot the results
+        figure(figsize=(2 * HEIGHT, HEIGHT))
+        plot_multiline_chart(
+            threshold_options,
+            {"NB": nb_metrics, "KNN": knn_metrics},
+            title=f"{file_tag} variance study ({metric})",
+            xlabel="Variance Threshold",
+            ylabel=metric,
+            percentage=True,
+        )
+        savefig(f"graphs/{file_tag}_fs_low_var_{metric}_study.png")
+        show()
+
+    def apply_feature_selection(self, vars2drop: list[str], file_tag: str):
+            """
+            Applies the feature selection to training and testing datasets.
+            :param vars2drop: List of variables to drop.
+            """
+            train = self.data_loader.data.drop(columns=[self.target])
+            test = self.data_loader.data[self.target]
+
+            train_copy: DataFrame = train.drop(vars2drop, axis=1, inplace=False)
+            test_copy: DataFrame = test.drop(vars2drop, axis=1, inplace=False)
+
+            # Save processed files
+            train_copy.to_csv(f"data/{file_tag}_train_lowvar.csv", index=True)
+            test_copy.to_csv(f"data/{file_tag}_test_lowvar.csv", index=True)
+
+            # Update the data loader
+            self.data_loader.train = train_copy
+            self.data_loader.test = test_copy
+
+            print(f"Feature selection applied. Train shape: {train_copy.shape}, Test shape: {test_copy.shape}")
