@@ -8,7 +8,9 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from dslabs_functions import determine_outlier_thresholds_for_var, run_NB, run_KNN, CLASS_EVAL_METRICS, \
-    plot_multibar_chart, get_variable_types
+    plot_multibar_chart, get_variable_types, concat
+from imblearn.over_sampling import SMOTE
+from numpy import ndarray
 
 
 class DataProcessing:
@@ -204,7 +206,7 @@ class DataProcessing:
             )
             results_removal = self.evaluate_step(
                 X_train_removed, X_test_removed, y_train_removed, y_test_removed,
-                self.data_loader.file_tag, "MV_Row_Removal"
+                self.data_loader.file_tag, "MV_Row_Removal", plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Row Removal"
             )
             print(f"Row Removal performance: {results_removal}")
             techniques['Remove MV'] = results_removal
@@ -228,7 +230,7 @@ class DataProcessing:
 
         results_mean_most_frequent = self.evaluate_step(
             X_train_mean, X_test_mean, y_train, y_test,
-            self.data_loader.file_tag, "MV_Mean_Most_Frequent_Imputation"
+            self.data_loader.file_tag, "MV_Mean_Most_Frequent_Imputation", plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Mean & Most Frequent Imputation"
         )
         print(f"Mean & Most Frequent Imputation performance: {results_mean_most_frequent}")
         techniques['Mean & Most Frequent'] = results_mean_most_frequent
@@ -248,15 +250,12 @@ class DataProcessing:
 
         results_median_most_frequent = self.evaluate_step(
             X_train_median, X_test_median, y_train, y_test,
-            self.data_loader.file_tag, "MV_Median_Most_Frequent_Imputation"
+            self.data_loader.file_tag, "MV_Median_Most_Frequent_Imputation", plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Median & Most Frequent Imputation"
         )
         print(f"Median & Most Frequent Imputation performance: {results_median_most_frequent}")
         techniques['Median & Most Frequent'] = results_median_most_frequent
 
-        print("\nForm the plots we conclude that the best approach is Mean & Most Frequent Imputation\n")
-        self.apply_best_missing_value_approach('Mean & Most Frequent', techniques)
-
-        print("Missing value handling completed.")
+        return techniques
 
     def apply_best_missing_value_approach(self, best_technique, techniques):
         """
@@ -336,7 +335,9 @@ class DataProcessing:
             outliers = df_train_dropped[(df_train_dropped[var] > top) | (df_train_dropped[var] < bottom)]
             df_train_dropped.drop(outliers.index, axis=0, inplace=True)
 
-        results_drop = self.evaluate_step(df_train_dropped.drop(columns=[self.target]), self.X_test, df_train_dropped[self.target], self.y_test, self.data_loader.file_tag, "Outlier_Drop")
+        results_drop = self.evaluate_step(df_train_dropped.drop(columns=[self.target]), self.X_test,
+                                          df_train_dropped[self.target], self.y_test, self.data_loader.file_tag,
+                                          "Outlier_Drop", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Drop")
         print(f"Drop Outliers performance: {results_drop}")
         print("Train data shape after dropping outliers:", df_train_dropped.shape)
         techniques['Drop'] = results_drop
@@ -350,7 +351,9 @@ class DataProcessing:
             median = df_train_replaced[var].median()
             df_train_replaced[var] = df_train_replaced[var].apply(lambda x: median if x > top or x < bottom else x)
 
-        results_replace = self.evaluate_step(df_train_replaced.drop(columns=[self.target]), self.X_test, df_train_replaced[self.target], self.y_test, self.data_loader.file_tag, "Outlier_Replace")
+        results_replace = self.evaluate_step(df_train_replaced.drop(columns=[self.target]), self.X_test,
+                                             df_train_replaced[self.target], self.y_test, self.data_loader.file_tag,
+                                             "Outlier_Replace", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Replace")
         print(f"Replace Outliers performance: {results_replace}")
         print("Train data shape after replacing outliers:", df_train_replaced.shape)
         print("Train data shape description after replacing outliers:\n", df_train_replaced.describe())
@@ -364,16 +367,15 @@ class DataProcessing:
             top, bottom = determine_outlier_thresholds_for_var(summary[var], threshold=5)
             df_train_truncated[var] = df_train_truncated[var].apply(lambda x: top if x > top else (bottom if x < bottom else x))
 
-        results_truncate = self.evaluate_step(df_train_truncated.drop(columns=[self.target]), self.X_test, df_train_truncated[self.target], self.y_test, self.data_loader.file_tag, "Outlier_Truncate")
+        results_truncate = self.evaluate_step(df_train_truncated.drop(columns=[self.target]), self.X_test,
+                                              df_train_truncated[self.target], self.y_test, self.data_loader.file_tag,
+                                              "Outlier_Truncate", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Truncate")
         print(f"Truncate Outliers performance: {results_truncate}")
         print("Train data shape after replacing outliers:", df_train_truncated.shape)
         print("Train data shape description after replacing outliers:\n", df_train_truncated.describe())
         techniques['Truncate'] = results_truncate
 
-        print("\nForm the plots we conclude that the best approach is to keep the Original dataset\n")
-        self.apply_best_outliers_approach('Original', techniques)
-
-        print("\nOutlier handling completed.")
+        return techniques, df_train_dropped, df_train_replaced, df_train_truncated
 
     def apply_best_outliers_approach(self, approach, techniques, X_train = None, y_train = None):
 
@@ -408,8 +410,9 @@ class DataProcessing:
         - MinMax Scaler
         """
 
-        print(f"\n\nHandling scaling fot the {self.data_loader.file_tag} dataset...")
+        print(f"\n\nHandling scaling for the {self.data_loader.file_tag} dataset...")
 
+        # Combine data for easier handling
         data_train = pd.concat([self.X_train, self.y_train], axis=1)
         data_test = pd.concat([self.X_test, self.y_test], axis=1)
 
@@ -421,59 +424,105 @@ class DataProcessing:
         print(f"Original Dataset performance: {self.previous_accuracy}")
         techniques['Original'] = self.previous_accuracy
 
-        target_data: Series = self.data_loader.data.pop(self.target)
-        vars: list[str] = self.data_loader.data.columns.to_list()
-        vars.append(self.target)
-
-        # Standard Scaler
-        transf: StandardScaler = StandardScaler(with_mean=True, with_std=True, copy=True).fit(self.data_loader.data)
-        df_zscore = DataFrame(transf.transform(self.data_loader.data), index=self.data_loader.data.index)
-        df_zscore[self.target] = target_data
-        df_zscore.columns = vars
-        df_zscore.to_csv(f"data/{self.data_loader.file_tag}_scaled_zscore.csv", index=False)
-
+        # Scaling with Standard Scaler
         print("\nEvaluating Standard Scaler...")
-        results_standard = self.evaluate_step(df_zscore.drop(columns=[self.target]), df_zscore[self.target], self.data_loader.file_tag, "Scaling_Standard")
+
+        # Separate features and target
+        target_data_train: Series = data_train.pop(self.target)
+        target_data_test: Series = data_test.pop(self.target)
+
+        # Fit the scaler on training data
+        transf: StandardScaler = StandardScaler(with_mean=True, with_std=True, copy=True)
+        transf.fit(data_train)
+
+        # Transform both training and test sets using the same scaler
+        df_zscore_train = pd.DataFrame(transf.transform(data_train), index=data_train.index, columns=data_train.columns)
+        df_zscore_test = pd.DataFrame(transf.transform(data_test), index=data_test.index, columns=data_test.columns)
+
+        # Add the target column back
+        df_zscore_train[self.target] = target_data_train
+        df_zscore_test[self.target] = target_data_test
+
+        # Save the scaled datasets (optional)
+        df_zscore_train.to_csv(f"data/{self.data_loader.file_tag}_scaled_zscore_train.csv", index=False)
+        df_zscore_test.to_csv(f"data/{self.data_loader.file_tag}_scaled_zscore_test.csv", index=False)
+
+        # Evaluate the performance of the Standard Scaler
+        results_standard = self.evaluate_step(
+            df_zscore_train.drop(columns=[self.target]),
+            df_zscore_test.drop(columns=[self.target]),
+            df_zscore_train[self.target],
+            df_zscore_test[self.target],
+            self.data_loader.file_tag, "Scaling_Standard", plot_title=f"Evaluation for {self.data_loader.file_tag} - Standard Scaling"
+        )
         print(f"Standard Scaler performance: {results_standard}")
         techniques['Standard'] = results_standard
 
-        # MinMax Scaler
-        transf: MinMaxScaler = MinMaxScaler(feature_range=(0, 1), copy=True).fit(self.data_loader.data)
-        df_minmax = DataFrame(transf.transform(self.data_loader.data), index=self.data_loader.data.index)
-        df_minmax[self.target] = target_data
-        df_minmax.columns = vars
-        df_minmax.to_csv(f"data/{self.data_loader.file_tag}_scaled_minmax.csv", index=False)
-
+        # Scaling with MinMax Scaler
         print("\nEvaluating MinMax Scaler...")
-        results_minmax = self.evaluate_step(df_minmax.drop(columns=[self.target]), df_minmax[self.target], self.data_loader.file_tag, "Scaling_MinMax")
+
+        # Fit the MinMaxScaler on training data
+        transf_minmax: MinMaxScaler = MinMaxScaler(feature_range=(0, 1), copy=True)
+        transf_minmax.fit(data_train)
+
+        # Transform both training and test sets using the MinMaxScaler
+        df_minmax_train = pd.DataFrame(transf_minmax.transform(data_train), index=data_train.index,
+                                       columns=data_train.columns)
+        df_minmax_test = pd.DataFrame(transf_minmax.transform(data_test), index=data_test.index,
+                                      columns=data_test.columns)
+
+        # Add the target column back
+        df_minmax_train[self.target] = target_data_train
+        df_minmax_test[self.target] = target_data_test
+
+        # Save the scaled datasets (optional)
+        df_minmax_train.to_csv(f"data/{self.data_loader.file_tag}_scaled_minmax_train.csv", index=False)
+        df_minmax_test.to_csv(f"data/{self.data_loader.file_tag}_scaled_minmax_test.csv", index=False)
+
+        # Evaluate the performance of the MinMax Scaler
+        results_minmax = self.evaluate_step(
+            df_minmax_train.drop(columns=[self.target]),
+            df_minmax_test.drop(columns=[self.target]),
+            df_minmax_train[self.target],
+            df_minmax_test[self.target],
+            self.data_loader.file_tag, "Scaling_MinMax", plot_title=f"Evaluation for {self.data_loader.file_tag} - MinMax Scaling"
+        )
         print(f"MinMax Scaler performance: {results_minmax}")
         techniques['MinMax'] = results_minmax
 
-        # # Compare techniques and choose the best one
-        # best_technique = max(techniques, key=lambda k: techniques[k]['knn'])
-        # print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
-        #
-        # # Apply the best technique to the dataset
-        # if best_technique == 'Original':
-        #     print("No changes made to the dataset (original data retained).")
-        # elif best_technique == 'Standard':
-        #     self.data_loader.data = df_zscore
-        #     self.previous_accuracy = techniques['Standard']
-        # elif best_technique == 'MinMax':
-        #     self.data_loader.data = df_minmax
-        #     self.previous_accuracy = techniques['MinMax']
+        return techniques, df_zscore_train, df_zscore_test, df_minmax_train, df_minmax_test
 
-        print("Scaling handling completed.")
+        # # Visualization (optional)
+        # fig, axs = subplots(1, 3, figsize=(20, 10), squeeze=False)
+        # axs[0, 0].set_title("Original data")
+        # self.data_loader.data.boxplot(ax=axs[0, 0])
+        # axs[0, 1].set_title("Z-score normalization")
+        # df_zscore_train.boxplot(ax=axs[0, 1])
+        # axs[0, 2].set_title("MinMax normalization")
+        # df_minmax_train.boxplot(ax=axs[0, 2])
+        # # savefig(f"graphs/data_processing/data_scaling/{self.data_loader.file_tag}_different_scaler_comparison.png")
+        # show()
 
-        fig, axs = subplots(1, 3, figsize=(20, 10), squeeze=False)
-        axs[0, 1].set_title("Original data")
-        self.data_loader.data.boxplot(ax=axs[0, 0])
-        axs[0, 0].set_title("Z-score normalization")
-        df_zscore.boxplot(ax=axs[0, 1])
-        axs[0, 2].set_title("MinMax normalization")
-        df_minmax.boxplot(ax=axs[0, 2])
-        # savefig(f"graphs/data_processing/data_scaling/{self.data_loader.file_tag}_different_scaler_comparison.png")
-        show()
+    def apply_best_scaling_approach(self, best_technique, techniques, X_train = None, y_train = None, X_test = None, y_test = None):
+        """
+        Applies the best scaling technique to the dataset.
+        """
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        elif best_technique == 'Standard':
+            print("Applying Standard Scaler...")
+            self.X_train = X_train
+            self.y_train = y_train
+            self.X_test = X_test
+            self.y_test = y_test
+        elif best_technique == 'MinMax':
+            print("Applying MinMax Scaler...")
+            self.X_train = X_train
+            self.y_train = y_train
+            self.X_test = X_test
+            self.y_test = y_test
+
+        self.previous_accuracy = techniques[best_technique]
 
     def handle_feature_selection(self):
         """
@@ -557,3 +606,97 @@ class DataProcessing:
         print(f"\nSelected Features: {selected_features}")
         print(f"Dropped Features for {best_technique}: {dropped_features[best_technique]}")
         print("Feature selection completed.")
+
+    def handle_balancing(self):
+        """
+        Handles class imbalance using undersampling, oversampling, and SMOTE techniques,
+        and evaluates the performance of each.
+        """
+        print(f"\n\nHandling balancing for the {self.data_loader.file_tag} dataset...\n")
+
+        # Combine training data and target for easier processing
+        data_train = pd.concat([self.X_train, self.y_train], axis=1)
+
+        # Ensure no duplicate columns
+        data_train = data_train.loc[:, ~data_train.columns.duplicated()]
+
+        # Get class counts and identify minority and majority classes
+        target_count = data_train[self.target].value_counts()
+        positive_class = target_count.idxmin()
+        negative_class = target_count.idxmax()
+
+        print(f"Class distribution before balancing: {target_count.to_dict()}")
+
+        techniques = {"Original": self.previous_accuracy}
+        print(f"Original Dataset performance: {self.previous_accuracy}")
+
+        # Random Undersampling
+        print("\nApplying Random Undersampling...")
+        df_positives = data_train[data_train[self.target] == positive_class]
+        df_negatives = data_train[data_train[self.target] == negative_class].sample(len(df_positives), random_state=42)
+        df_under = pd.concat([df_positives, df_negatives], axis=0)
+        X_train_under, X_test_under, y_train_under, y_test_under = train_test_split(
+            df_under.drop(columns=[self.target]), df_under[self.target], test_size=0.3, random_state=42
+        )
+        techniques["Undersampling"] = self.evaluate_step(
+            X_train_under, X_test_under, y_train_under, y_test_under, self.data_loader.file_tag,
+            "Balancing_Undersampling",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - Undersampling"
+        )
+        print(f"Undersampling performance: {techniques['Undersampling']}")
+
+        # Random Oversampling
+        print("\nApplying Random Oversampling...")
+        df_negatives = data_train[data_train[self.target] == negative_class]
+        df_positives = data_train[data_train[self.target] == positive_class].sample(len(df_negatives), replace=True,
+                                                                                    random_state=42)
+        df_over = pd.concat([df_positives, df_negatives], axis=0)
+        X_train_over, X_test_over, y_train_over, y_test_over = train_test_split(
+            df_over.drop(columns=[self.target]), df_over[self.target], test_size=0.3, random_state=42
+        )
+        techniques["Oversampling"] = self.evaluate_step(
+            X_train_over, X_test_over, y_train_over, y_test_over, self.data_loader.file_tag,
+            "Balancing_Oversampling",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - Oversampling"
+        )
+        print(f"Oversampling performance: {techniques['Oversampling']}")
+
+        # SMOTE
+        print("\nApplying SMOTE...")
+        smote = SMOTE(sampling_strategy="minority", random_state=42)
+        X = data_train.drop(columns=[self.target])
+        y = data_train[self.target]
+        smote_X, smote_y = smote.fit_resample(X, y)
+        X_train_smote, X_test_smote, y_train_smote, y_test_smote = train_test_split(
+            smote_X, smote_y, test_size=0.3, random_state=42
+        )
+        techniques["SMOTE"] = self.evaluate_step(
+            X_train_smote, X_test_smote, y_train_smote, y_test_smote, self.data_loader.file_tag,
+            "Balancing_SMOTE",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - SMOTE"
+        )
+        print(f"SMOTE performance: {techniques['SMOTE']}")
+
+        return techniques, df_under, df_over, smote_X, smote_y
+
+    def apply_best_balancing_approach(self, best_technique, techniques, X_train = None, y_train = None):
+        """
+        Applies the best balancing technique to the dataset.
+        """
+        match best_technique:
+            case 'Original':
+                print("No changes made to the dataset (original data retained).")
+            case 'Undersampling':
+                print("Applying Random Undersampling...")
+                self.X_train = X_train
+                self.y_train = y_train
+            case 'Oversampling':
+                print("Applying Random Oversampling...")
+                self.X_train = X_train
+                self.y_train = y_train
+            case 'SMOTE':
+                print("Applying SMOTE...")
+                self.X_train = X_train
+                self.y_train = y_train
+
+        self.previous_accuracy = techniques[best_technique]
