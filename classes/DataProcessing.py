@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from pandas import read_csv, DataFrame, Series
-from matplotlib.pyplot import subplots, show
+from matplotlib.pyplot import subplots, show, savefig
+from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
@@ -9,12 +11,15 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
 
+from dslabs_functions import determine_outlier_thresholds_for_var
+
+
 class DataProcessing:
 
     def __init__(self, data_loader):
         self.data_loader = data_loader
-        self.data = self.data_loader.data
         self.target = self.data_loader.target
+        self.previous_accuracy = {}
 
     def encode_variables(self):
         """
@@ -86,11 +91,8 @@ class DataProcessing:
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
             print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification task.")
 
-            self.data_loader.data.drop(columns=['PD_CD'], inplace=True)
-            print("\nDropped 'PD_CD' variable for being highly correlated with the 'KY_CD' variable.")
-
-            self.data_loader.data.drop(columns=['PD_DESC'], inplace=True)
-            print("\nDropped 'PD_DESC' variable for being highly correlated with the 'OFNS_DESC' variable.")
+            self.data_loader.data.drop(columns=['LAW_CODE'], inplace=True)
+            print("\nDropped 'LAW_CODE' variable for being a false predictor.")
         elif self.data_loader.target == "CLASS":
 
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
@@ -129,6 +131,33 @@ class DataProcessing:
         results['average_accuracy'] = (results['knn'] + results['nb']) / 2
 
         return results
+
+    def plot_technique_comparison(self, techniques, step, metric='average_accuracy'):
+        """
+        Plots a comparison of the techniques used in the data processing steps.
+
+        Parameters:
+        - techniques (dict): A dictionary containing the results of the techniques.
+        - technique_names (list): A list of the names of the techniques.
+        """
+        print("\nPlotting average accuracies...")
+        technique_names = list(techniques.keys())
+        metric_accuracies = [techniques[tech][metric] for tech in technique_names]
+
+        plt.figure(figsize=(8, 6))
+        plt.bar(technique_names, metric_accuracies, color=['skyblue', 'orange', 'green'], alpha=0.8)
+        plt.title(f'Comparison of {metric} by {step} Technique', fontsize=14)
+        plt.xlabel(f'{step} Technique', fontsize=12)
+        plt.ylabel(f'{metric}', fontsize=12)
+        plt.ylim(0, 1)
+        plt.xticks(rotation=45, fontsize=10)
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+        for i, acc in enumerate(metric_accuracies):
+            plt.text(i, acc + 0.01, f"{acc:.7f}", ha='center', fontsize=10)
+
+        plt.tight_layout()
+        plt.show()
 
     def handle_missing_values(self):
         """
@@ -177,6 +206,9 @@ class DataProcessing:
         print(f"Median Imputation performance: {results_median}")
         techniques['Median'] = results_median
 
+        # Plot the comparison of techniques
+        self.plot_technique_comparison(techniques, 'Missing Value Handling')
+
         # Compare techniques and choose the best one
         best_technique = max(techniques, key=lambda k: techniques[k]['average_accuracy'])
         print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
@@ -184,10 +216,13 @@ class DataProcessing:
         # Apply the best technique to the dataset
         if best_technique == 'Remove MV':
             self.data_loader.data = data_removed
+            self.previous_accuracy = techniques['Remove MV']
         elif best_technique == 'Mean':
             self.data_loader.data = self.data_loader.data.fillna(self.data_loader.data.mean())
+            self.previous_accuracy = techniques['Mean']
         elif best_technique == 'Median':
             self.data_loader.data = self.data_loader.data.fillna(self.data_loader.data.median())
+            self.previous_accuracy = techniques['Median']
 
         print("Missing value handling completed.")
 
@@ -196,72 +231,93 @@ class DataProcessing:
         Handles outliers using different techniques and selects the best-performing one.
         The evaluated techniques are:
         - Original Dataset (no outlier removal)
-        - Z-Score Removal
-        - IQR Removal
+        - Replacing Outliers
+        - Truncating Outliers
         """
-
-        X = self.data_loader.data.drop(columns=[self.target])
-        y = self.data_loader.data[self.target]
 
         print("\nHandling outliers...")
 
-        # List to store results for different techniques
+        # Dictionary to store results for different techniques
         techniques = {}
 
         # Original Dataset (Baseline)
         print("\nEvaluating Original Dataset (No Outlier Removal)...")
-        results_original = self.evaluate_step(X, y)
-        print(f"Original Dataset performance: {results_original}")
-        print(f"Original Dataset shape: {X.shape}")
-        techniques['Original'] = results_original
+        print(f"Original Dataset performance: {self.previous_accuracy}")
+        print("Original data shape:", self.data_loader.data.shape)
+        techniques['Original'] = self.previous_accuracy
 
-        # Z-Score Method
-        print("\nEvaluating Z-Score Removal...")
-        zscore = lambda x: (x - x.mean()) / x.std()
-        X_zscore_removed = X[(zscore(X) <= 3).all(axis=1)]
-        y_zscore_removed = y[X_zscore_removed.index]  # Keep target aligned
+        X = self.data_loader.data.drop(columns=[self.target])
+        numeric_vars = X.select_dtypes(include=['float64', 'int64']).columns.tolist()
 
-        if not X_zscore_removed.empty:
-            results_zscore = self.evaluate_step(X_zscore_removed, y_zscore_removed)
-            print(f"Z-Score Removal performance: {results_zscore}")
-            print(f"Z-Score Removal shape: {X_zscore_removed.shape}")
-            techniques['Z-Score'] = results_zscore
-        else:
-            print("\nZ-Score Removal skipped (would result in an empty dataset).")
-            techniques['Z-Score'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
+        if not numeric_vars:
+            print("There are no numeric variables to process for outliers.")
+            return
 
-        # IQR Method
-        print("\nEvaluating IQR Removal...")
-        Q1 = X.quantile(0.25)
-        Q3 = X.quantile(0.75)
-        IQR = Q3 - Q1
-        X_iqr_removed = X[~((X < (Q1 - 1.5 * IQR)) | (X > (Q3 + 1.5 * IQR))).any(axis=1)]
-        y_iqr_removed = y[X_iqr_removed.index]  # Keep target aligned
+        # Drop Outliers
+        print("\nEvaluating Drop Outliers...")
+        df_dropped = self.data_loader.data.copy()
+        summary = df_dropped[numeric_vars].describe()
 
-        if not X_iqr_removed.empty:
-            results_iqr = self.evaluate_step(X_iqr_removed, y_iqr_removed)
-            print(f"IQR Removal performance: {results_iqr}")
-            print(f"IQR Removal shape: {X_iqr_removed.shape}")
-            techniques['IQR'] = results_iqr
-        else:
-            print("\nIQR Removal skipped (would result in an empty dataset).")
-            techniques['IQR'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
+        for var in numeric_vars:
+            top, bottom = determine_outlier_thresholds_for_var(summary[var])
+            outliers = df_dropped[(df_dropped[var] > top) | (df_dropped[var] < bottom)]
+            df_dropped.drop(outliers.index, axis=0, inplace=True)
 
-        # Replacing outliers with fixed values /// Truncating outliers
+        results_drop = self.evaluate_step(df_dropped.drop(columns=[self.target]), df_dropped[self.target])
+        print(f"Drop Outliers performance: {results_drop}")
+        print("Data shape after dropping outliers:", df_dropped.shape)
+        techniques['Drop'] = results_drop
 
-        # Compare techniques and choose the best one
+        # Replace Outliers with Median
+        print("\nEvaluating Replace Outliers...")
+        df_replaced = self.data_loader.data.copy()
+
+        for var in numeric_vars:
+            top, bottom = determine_outlier_thresholds_for_var(summary[var])
+            median = df_replaced[var].median()
+            df_replaced[var] = df_replaced[var].apply(lambda x: median if x > top or x < bottom else x)
+
+        results_replace = self.evaluate_step(df_replaced.drop(columns=[self.target]), df_replaced[self.target])
+        print(f"Replace Outliers performance: {results_replace}")
+        print("Data shape after replacing outliers:", df_replaced.shape)
+        print("Data description after replacing outliers:\n", df_replaced.describe())
+        techniques['Replace'] = results_replace
+
+        # Truncate Outliers
+        print("\nEvaluating Truncate Outliers...")
+        df_truncated = self.data_loader.data.copy()
+
+        for var in numeric_vars:
+            top, bottom = determine_outlier_thresholds_for_var(summary[var])
+            df_truncated[var] = df_truncated[var].apply(lambda x: top if x > top else (bottom if x < bottom else x))
+
+        results_truncate = self.evaluate_step(df_truncated.drop(columns=[self.target]), df_truncated[self.target])
+        print(f"Truncate Outliers performance: {results_truncate}")
+        print("Data shape after truncating outliers:", df_truncated.shape)
+        print("Data description after truncating outliers:\n", df_truncated.describe())
+        techniques['Truncate'] = results_truncate
+
+        # Plot the comparison of techniques
+        self.plot_technique_comparison(techniques, 'Outlier Handling')
+
+        # Select the best technique
         best_technique = max(techniques, key=lambda k: techniques[k]['average_accuracy'])
         print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
 
         # Apply the best technique to the dataset
         if best_technique == 'Original':
             print("No changes made to the dataset (original data retained).")
-        elif best_technique == 'Z-Score':
-            self.data_loader.data = pd.concat([X_zscore_removed, y_zscore_removed], axis=1)
-        elif best_technique == 'IQR':
-            self.data_loader.data = pd.concat([X_iqr_removed, y_iqr_removed], axis=1)
+        elif best_technique == 'Drop':
+            self.data_loader.data = df_dropped
+            self.previous_accuracy = techniques['Drop']
+        elif best_technique == 'Replace':
+            self.data_loader.data = df_replaced
+            self.previous_accuracy = techniques['Replace']
+        elif best_technique == 'Truncate':
+            self.data_loader.data = df_truncated
+            self.previous_accuracy = techniques['Truncate']
 
-        print("Outlier handling completed.")
+        print("\nOutlier handling completed.")
 
     def handle_scaling(self):
         """
@@ -270,60 +326,153 @@ class DataProcessing:
         - Standard Scaler
         - MinMax Scaler
         """
-        data = self.data_loader.data
-        target = self.data_loader.target
-
-        X = self.data_loader.data.drop(columns=[self.target])
-        y = self.data_loader.data[self.target]
-
-        target_data: Series = data.pop(target)
-        vars: list[str] = data.columns.to_list()
-        vars.append(target)
 
         print("\nHandling scaling...")
 
         # List to store results for different techniques
         techniques = {}
 
-        # TODO: Calculate KNN for original data to check if scaling improves or not
+        # Original Dataset (Baseline)
+        print("\nEvaluating Original Dataset (No scaling applied)...")
+        print(f"Original Dataset performance: {self.previous_accuracy}")
+        techniques['Original'] = self.previous_accuracy
+
+        target_data: Series = self.data_loader.data.pop(self.target)
+        vars: list[str] = self.data_loader.data.columns.to_list()
+        vars.append(self.target)
 
         # Standard Scaler
-        transf: StandardScaler = StandardScaler(with_mean=True, with_std=True, copy=True).fit(data)
-        df_zscore = DataFrame(transf.transform(data), index=data.index)
-        df_zscore[target] = target_data
+        transf: StandardScaler = StandardScaler(with_mean=True, with_std=True, copy=True).fit(self.data_loader.data)
+        df_zscore = DataFrame(transf.transform(self.data_loader.data), index=self.data_loader.data.index)
+        df_zscore[self.target] = target_data
         df_zscore.columns = vars
+        df_zscore.to_csv(f"data/{self.data_loader.file_tag}_scaled_zscore.csv", index=False)
 
-        results_standard = self.evaluate_step(df_zscore.drop(columns=[target]), df_zscore[target])
+        print("\nEvaluating Standard Scaler...")
+        results_standard = self.evaluate_step(df_zscore.drop(columns=[self.target]), df_zscore[self.target])
         print(f"Standard Scaler performance: {results_standard}")
         techniques['Standard'] = results_standard
 
         # MinMax Scaler
-        transf: MinMaxScaler = MinMaxScaler(feature_range=(0, 1), copy=True).fit(data)
-        df_minmax = DataFrame(transf.transform(data), index=data.index)
-        df_minmax[target] = target_data
+        transf: MinMaxScaler = MinMaxScaler(feature_range=(0, 1), copy=True).fit(self.data_loader.data)
+        df_minmax = DataFrame(transf.transform(self.data_loader.data), index=self.data_loader.data.index)
+        df_minmax[self.target] = target_data
         df_minmax.columns = vars
+        df_minmax.to_csv(f"data/{self.data_loader.file_tag}_scaled_minmax.csv", index=False)
 
-        results_minmax = self.evaluate_step(df_minmax.drop(columns=[target]), df_minmax[target])
+        print("\nEvaluating MinMax Scaler...")
+        results_minmax = self.evaluate_step(df_minmax.drop(columns=[self.target]), df_minmax[self.target])
         print(f"MinMax Scaler performance: {results_minmax}")
         techniques['MinMax'] = results_minmax
+
+        # Plot the comparison of techniques
+        self.plot_technique_comparison(techniques, 'Scaling Handling', 'knn')
 
         # Compare techniques and choose the best one
         best_technique = max(techniques, key=lambda k: techniques[k]['knn'])
         print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
 
         # Apply the best technique to the dataset
-        if best_technique == 'Standard':
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        elif best_technique == 'Standard':
             self.data_loader.data = df_zscore
+            self.previous_accuracy = techniques['Standard']
         elif best_technique == 'MinMax':
             self.data_loader.data = df_minmax
+            self.previous_accuracy = techniques['MinMax']
 
         print("Scaling handling completed.")
 
         fig, axs = subplots(1, 3, figsize=(20, 10), squeeze=False)
         axs[0, 1].set_title("Original data")
-        data.boxplot(ax=axs[0, 0])
+        self.data_loader.data.boxplot(ax=axs[0, 0])
         axs[0, 0].set_title("Z-score normalization")
         df_zscore.boxplot(ax=axs[0, 1])
         axs[0, 2].set_title("MinMax normalization")
         df_minmax.boxplot(ax=axs[0, 2])
+        # savefig(f"graphs/data_processing/data_scaling/{self.data_loader.file_tag}_different_scaler_comparison.png")
         show()
+
+    def handle_feature_selection(self):
+        """
+        Performs feature selection using:
+        - Dropping Low Variance Variables
+        - Dropping Redundant Variables (via correlation)
+        The best dataset configuration is selected based on model performance.
+        Tracks and reports the selected and dropped variables.
+        """
+        print("\nStarting feature selection...")
+
+        X = self.data_loader.data.drop(columns=[self.target])
+        y = self.data_loader.data[self.target]
+
+        techniques = {}
+        dropped_features = {}
+
+        # Original Dataset (Baseline)
+        print("\nEvaluating Original Dataset (No Feature Selection)...")
+        results_original = self.evaluate_step(X, y)
+        print(f"Original Dataset performance: {results_original}")
+        techniques['Original'] = results_original
+        dropped_features['Original'] = []
+
+        # Dropping Low Variance Variables
+        print("\nEvaluating Low Variance Feature Selection...")
+        low_variance_filter = VarianceThreshold(threshold=0.01)  # Adjust threshold as necessary
+        low_variance_filter.fit(X)  # Fit the filter to the data
+        low_variance_support = low_variance_filter.get_support()  # Get the mask for retained features
+        X_low_variance = pd.DataFrame(
+            low_variance_filter.transform(X),  # Use transform to apply the filter
+            columns=X.columns[low_variance_support]
+        )
+
+        dropped_low_variance = X.columns[~low_variance_support].tolist()
+        dropped_features['Low Variance'] = dropped_low_variance
+
+        if not X_low_variance.empty:
+            results_low_variance = self.evaluate_step(X_low_variance, y)
+            print(f"Low Variance Feature Selection performance: {results_low_variance}")
+            print(f"Dropped Low Variance Variables: {dropped_low_variance}")
+            techniques['Low Variance'] = results_low_variance
+        else:
+            print("Low Variance Feature Selection resulted in an empty dataset.")
+            techniques['Low Variance'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
+
+        # Dropping Redundant Variables (via correlation)
+        print("\nEvaluating Redundant Feature Removal...")
+        correlation_matrix = X.corr().abs()
+        upper_triangle = correlation_matrix.where(np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool))
+        redundant_features = [column for column in upper_triangle.columns if
+                              any(upper_triangle[column] > 0.95)]  # Threshold = 0.95
+        X_redundant_removed = X.drop(columns=redundant_features)
+
+        dropped_features['Redundant'] = redundant_features
+
+        if not X_redundant_removed.empty:
+            results_redundant = self.evaluate_step(X_redundant_removed, y)
+            print(f"Redundant Feature Removal performance: {results_redundant}")
+            print(f"Dropped Redundant Variables: {redundant_features}")
+            techniques['Redundant'] = results_redundant
+        else:
+            print("Redundant Feature Removal resulted in an empty dataset.")
+            techniques['Redundant'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
+
+        # Compare techniques and choose the best one
+        best_technique = max(techniques, key=lambda k: techniques[k]['average_accuracy'])
+        print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
+
+        # Apply the best technique to the dataset
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original features retained).")
+            selected_features = X.columns.tolist()
+        elif best_technique == 'Low Variance':
+            self.data_loader.data = pd.concat([X_low_variance, y], axis=1)
+            selected_features = X_low_variance.columns.tolist()
+        elif best_technique == 'Redundant':
+            self.data_loader.data = pd.concat([X_redundant_removed, y], axis=1)
+            selected_features = X_redundant_removed.columns.tolist()
+
+        print(f"\nSelected Features: {selected_features}")
+        print(f"Dropped Features for {best_technique}: {dropped_features[best_technique]}")
+        print("Feature selection completed.")

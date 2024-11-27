@@ -606,7 +606,7 @@ class DataProfiling:
             figsize (tuple): Size of the figure in inches (width, height).
         """
         # Compute the correlation matrix for all columns
-        corr_mtx: DataFrame = self.data.corr().abs()
+        corr_mtx: DataFrame = self.data_loader.data.corr().abs()
 
         # Increase figure size and resolution
         figure(figsize=figsize, dpi=dpi)
