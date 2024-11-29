@@ -19,10 +19,10 @@ class DataProcessing:
         self.data_loader = data_loader
         self.target = self.data_loader.target
         self.previous_accuracy = {}
-        self.X_train = None
-        self.X_test = None
-        self.y_train = None
-        self.y_test = None
+        self.X_train = DataFrame()
+        self.X_test = DataFrame()
+        self.y_train = Series()
+        self.y_test = Series()
 
     def encode_variables(self):
         """
@@ -91,6 +91,18 @@ class DataProcessing:
 
         self.data_loader.data.drop(columns=['OFNS_DESC'], inplace=True)
 
+        # # Encode PD_DESC
+        # print("Encoding PD_DESC...")
+        # label_encoder = LabelEncoder()
+        # self.data_loader.data['PD_DESC'] = label_encoder.fit_transform(
+        #     self.data_loader.data['PD_DESC'].fillna('UNKNOWN'))
+        #
+        # # Encode OFNS_DESC
+        # print("Encoding OFNS_DESC...")
+        # label_encoder = LabelEncoder()
+        # self.data_loader.data['OFNS_DESC'] = label_encoder.fit_transform(
+        #     self.data_loader.data['OFNS_DESC'].fillna('UNKNOWN'))
+
         # Encode LAW_CODE
         print("Encoding LAW_CODE...")
         label_encoder = LabelEncoder()
@@ -121,20 +133,35 @@ class DataProcessing:
         """
         if self.data_loader.target == "LAW_CAT_CD":
 
+            # #Drop all the variables
+            # data1 = self.data_loader.data['PD_CD']
+            # data2 = self.data_loader.data['LAW_CAT_CD']
+            #
+            # self.data_loader.data = pd.concat([data1, data2], axis=1)
+
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
             print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification task.")
 
+            # self.data_loader.data.drop(columns=['PD_DESC'], inplace=True)
+            # print("\nDropped 'PD_DESC' variable for being irrelevant for the classification task.")
+            #
+            # self.data_loader.data.drop(columns=['OFNS_DESC'], inplace=True)
+            # print("\nDropped 'OFNS_DESC' variable for being irrelevant for the classification task.")
+
+            # self.data_loader.data.drop(columns=['PD_CD'], inplace=True)
+            # print("\nDropped 'PD_CD' variable for being a false predictor.")
+            #
+            # self.data_loader.data.drop(columns=['KY_CD'], inplace=True)
+            # print("\nDropped 'KY_CD' variable for being a false predictor.")
+
             self.data_loader.data.drop(columns=['LAW_CODE'], inplace=True)
             print("Dropped 'LAW_CODE' variable for being a false predictor.")
-
-            self.data_loader.data.drop(columns=['KY_CD'], inplace=True)
-            print("Dropped 'KY_CD' variable for being a false predictor.")
         elif self.data_loader.target == "CLASS":
 
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
             print("\nDropped 'Financial Distress' variable for being a false predictor.")
 
-    def evaluate_step(self, X_train, X_test, y_train, y_test, dataset, file_tag, metric="accuracy", plot_title="Model Evaluation"):
+    def evaluate_step(self, X_train, X_test, y_train, y_test, dataset, file_tag, metric="accuracy", plot_title="Model Evaluation", is_scalling = False):
         """
         Evaluates the model's performance on a given dataset and generates a comparison plot.
 
@@ -153,21 +180,40 @@ class DataProcessing:
         # Dictionary to store evaluation results
         eval_results = {}
 
-        # Run Naive Bayes and KNN models and evaluate them
-        eval_NB = run_NB(X_train, y_train, X_test, y_test, metric=metric)
-        eval_KNN = run_KNN(X_train, y_train, X_test, y_test, metric=metric)
+        if is_scalling == False:
 
-        # Combine the results for plotting
-        for metric_name in CLASS_EVAL_METRICS:
-            eval_results[metric_name] = [eval_NB[metric_name], eval_KNN[metric_name]]
+            # Run Naive Bayes and KNN models and evaluate them
+            eval_NB = run_NB(X_train, y_train, X_test, y_test, metric=metric)
+            eval_KNN = run_KNN(X_train, y_train, X_test, y_test, metric=metric)
 
-        # Plot the results as a multibar chart
-        figure()
-        plot_multibar_chart(["NB", "KNN"], eval_results, title=plot_title, percentage=True)
-        savefig(f"graphs/data_preparation/{dataset}_{file_tag}_eval.png")
-        show()
+            # Combine the results for plotting
+            for metric_name in CLASS_EVAL_METRICS:
+                eval_results[metric_name] = [eval_NB[metric_name], eval_KNN[metric_name]]
 
-        return eval_results
+            # Plot the results as a multibar chart
+            figure()
+            plot_multibar_chart(["NB", "KNN"], eval_results, title=plot_title, percentage=True)
+            savefig(f"graphs/data_preparation/{dataset}_{file_tag}_eval.png")
+            show()
+
+            return eval_results
+
+        else:
+
+            # Run KNN models and evaluate them
+            eval_KNN = run_KNN(X_train, y_train, X_test, y_test, metric=metric)
+
+            # Combine the results for plotting
+            for metric_name in CLASS_EVAL_METRICS:
+                eval_results[metric_name] = [eval_KNN[metric_name]]
+
+            # Plot the results as a multibar chart
+            figure()
+            plot_multibar_chart(["KNN"], eval_results, title=plot_title, percentage=True)
+            savefig(f"graphs/data_preparation/{dataset}_{file_tag}_eval.png")
+            show()
+
+            return eval_results
 
     def handle_missing_values(self):
         """
@@ -178,10 +224,11 @@ class DataProcessing:
         - Row Removal (drops rows with any missing values)
         """
 
+        print(f"\n\nHandling missing values for the {self.data_loader.file_tag} dataset...")
+
+        # Data setup
         X = self.data_loader.data.drop(columns=[self.target])
         y = self.data_loader.data[self.target]
-
-        print(f"\n\nHandling missing values for the {self.data_loader.file_tag} dataset...")
 
         # Use get_variable_types to categorize variables
         variable_types = get_variable_types(X)
@@ -191,11 +238,10 @@ class DataProcessing:
         # Split data into training and test sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # List to store results
+        # Dictionary to store results
         techniques = {}
 
         # Row Removal
-        print("\nEvaluating Row Removal...")
         data_removed = self.data_loader.data.dropna()
 
         if not data_removed.empty:  # Ensure removal doesn't leave the dataset empty
@@ -206,16 +252,15 @@ class DataProcessing:
             )
             results_removal = self.evaluate_step(
                 X_train_removed, X_test_removed, y_train_removed, y_test_removed,
-                self.data_loader.file_tag, "MV_Row_Removal", plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Row Removal"
+                self.data_loader.file_tag, "MV_Row_Removal",
+                plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Row Removal"
             )
-            print(f"Row Removal performance: {results_removal}")
             techniques['Remove MV'] = results_removal
         else:
             print("\nRow Removal skipped (would result in an empty dataset).")
             techniques['Remove MV'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
 
         # Mean & Most Frequent Imputation
-        print("\nEvaluating Mean & Most Frequent Imputation...")
         imputer_mean_numeric = SimpleImputer(strategy='mean')
         imputer_most_frequent = SimpleImputer(strategy='most_frequent')
 
@@ -230,13 +275,12 @@ class DataProcessing:
 
         results_mean_most_frequent = self.evaluate_step(
             X_train_mean, X_test_mean, y_train, y_test,
-            self.data_loader.file_tag, "MV_Mean_Most_Frequent_Imputation", plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Mean & Most Frequent Imputation"
+            self.data_loader.file_tag, "MV_Mean_Most_Frequent_Imputation",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Mean & Most Frequent Imputation"
         )
-        print(f"Mean & Most Frequent Imputation performance: {results_mean_most_frequent}")
         techniques['Mean & Most Frequent'] = results_mean_most_frequent
 
         # Median & Most Frequent Imputation
-        print("\nEvaluating Median & Most Frequent Imputation...")
         imputer_median_numeric = SimpleImputer(strategy='median')
 
         X_train_median = X_train.copy()
@@ -250,10 +294,15 @@ class DataProcessing:
 
         results_median_most_frequent = self.evaluate_step(
             X_train_median, X_test_median, y_train, y_test,
-            self.data_loader.file_tag, "MV_Median_Most_Frequent_Imputation", plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Median & Most Frequent Imputation"
+            self.data_loader.file_tag, "MV_Median_Most_Frequent_Imputation",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Median & Most Frequent Imputation"
         )
-        print(f"Median & Most Frequent Imputation performance: {results_median_most_frequent}")
         techniques['Median & Most Frequent'] = results_median_most_frequent
+
+        # Print all performances at the end
+        print("\nSummary of Missing Value Handling Techniques:")
+        for technique, performance in techniques.items():
+            print(f"{technique} performance: {performance}")
 
         return techniques
 
@@ -314,8 +363,6 @@ class DataProcessing:
         techniques = {}
 
         # Original Dataset (Baseline)
-        print("\nEvaluating Original Dataset (No Outlier Removal)...")
-        print(f"Original Dataset performance: {self.previous_accuracy}")
         print("Original train data shape:", data_train.shape)
         techniques['Original'] = self.previous_accuracy
 
@@ -326,7 +373,6 @@ class DataProcessing:
             return
 
         # Drop Outliers
-        print("\nEvaluating Drop Outliers...")
         df_train_dropped = data_train.copy()
         summary = df_train_dropped[numeric_vars_train].describe()
 
@@ -338,12 +384,10 @@ class DataProcessing:
         results_drop = self.evaluate_step(df_train_dropped.drop(columns=[self.target]), self.X_test,
                                           df_train_dropped[self.target], self.y_test, self.data_loader.file_tag,
                                           "Outlier_Drop", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Drop")
-        print(f"Drop Outliers performance: {results_drop}")
         print("Train data shape after dropping outliers:", df_train_dropped.shape)
         techniques['Drop'] = results_drop
 
         # Replace Outliers with Median
-        print("\nEvaluating Replace Outliers...")
         df_train_replaced = data_train.copy()
 
         for var in numeric_vars_train:
@@ -354,13 +398,11 @@ class DataProcessing:
         results_replace = self.evaluate_step(df_train_replaced.drop(columns=[self.target]), self.X_test,
                                              df_train_replaced[self.target], self.y_test, self.data_loader.file_tag,
                                              "Outlier_Replace", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Replace")
-        print(f"Replace Outliers performance: {results_replace}")
         print("Train data shape after replacing outliers:", df_train_replaced.shape)
         print("Train data shape description after replacing outliers:\n", df_train_replaced.describe())
         techniques['Replace'] = results_replace
 
         # Truncate Outliers
-        print("\nEvaluating Truncate Outliers...")
         df_train_truncated = data_train.copy()
 
         for var in numeric_vars_train:
@@ -370,10 +412,14 @@ class DataProcessing:
         results_truncate = self.evaluate_step(df_train_truncated.drop(columns=[self.target]), self.X_test,
                                               df_train_truncated[self.target], self.y_test, self.data_loader.file_tag,
                                               "Outlier_Truncate", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Truncate")
-        print(f"Truncate Outliers performance: {results_truncate}")
         print("Train data shape after replacing outliers:", df_train_truncated.shape)
         print("Train data shape description after replacing outliers:\n", df_train_truncated.describe())
         techniques['Truncate'] = results_truncate
+
+        # Print all performances at the end
+        print("\nSummary of Outlier Handling Techniques:")
+        for technique, performance in techniques.items():
+            print(f"{technique} performance: {performance}")
 
         return techniques, df_train_dropped, df_train_replaced, df_train_truncated
 
@@ -420,12 +466,9 @@ class DataProcessing:
         techniques = {}
 
         # Original Dataset (Baseline)
-        print("\nEvaluating Original Dataset (No scaling applied)...")
-        print(f"Original Dataset performance: {self.previous_accuracy}")
         techniques['Original'] = self.previous_accuracy
 
         # Scaling with Standard Scaler
-        print("\nEvaluating Standard Scaler...")
 
         # Separate features and target
         target_data_train: Series = data_train.pop(self.target)
@@ -443,23 +486,19 @@ class DataProcessing:
         df_zscore_train[self.target] = target_data_train
         df_zscore_test[self.target] = target_data_test
 
-        # Save the scaled datasets (optional)
-        df_zscore_train.to_csv(f"data/{self.data_loader.file_tag}_scaled_zscore_train.csv", index=False)
-        df_zscore_test.to_csv(f"data/{self.data_loader.file_tag}_scaled_zscore_test.csv", index=False)
-
         # Evaluate the performance of the Standard Scaler
         results_standard = self.evaluate_step(
             df_zscore_train.drop(columns=[self.target]),
             df_zscore_test.drop(columns=[self.target]),
             df_zscore_train[self.target],
             df_zscore_test[self.target],
-            self.data_loader.file_tag, "Scaling_Standard", plot_title=f"Evaluation for {self.data_loader.file_tag} - Standard Scaling"
+            self.data_loader.file_tag, "Scaling_Standard",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - Standard Scaling",
+            is_scalling = True
         )
-        print(f"Standard Scaler performance: {results_standard}")
         techniques['Standard'] = results_standard
 
         # Scaling with MinMax Scaler
-        print("\nEvaluating MinMax Scaler...")
 
         # Fit the MinMaxScaler on training data
         transf_minmax: MinMaxScaler = MinMaxScaler(feature_range=(0, 1), copy=True)
@@ -475,33 +514,24 @@ class DataProcessing:
         df_minmax_train[self.target] = target_data_train
         df_minmax_test[self.target] = target_data_test
 
-        # Save the scaled datasets (optional)
-        df_minmax_train.to_csv(f"data/{self.data_loader.file_tag}_scaled_minmax_train.csv", index=False)
-        df_minmax_test.to_csv(f"data/{self.data_loader.file_tag}_scaled_minmax_test.csv", index=False)
-
         # Evaluate the performance of the MinMax Scaler
         results_minmax = self.evaluate_step(
             df_minmax_train.drop(columns=[self.target]),
             df_minmax_test.drop(columns=[self.target]),
             df_minmax_train[self.target],
             df_minmax_test[self.target],
-            self.data_loader.file_tag, "Scaling_MinMax", plot_title=f"Evaluation for {self.data_loader.file_tag} - MinMax Scaling"
+            self.data_loader.file_tag, "Scaling_MinMax",
+            plot_title=f"Evaluation for {self.data_loader.file_tag} - MinMax Scaling",
+            is_scalling = True
         )
-        print(f"MinMax Scaler performance: {results_minmax}")
         techniques['MinMax'] = results_minmax
 
-        return techniques, df_zscore_train, df_zscore_test, df_minmax_train, df_minmax_test
+        # Print all performances at the end
+        print("\nSummary of Scaling Techniques:")
+        for technique, performance in techniques.items():
+            print(f"{technique} performance: {performance}")
 
-        # # Visualization (optional)
-        # fig, axs = subplots(1, 3, figsize=(20, 10), squeeze=False)
-        # axs[0, 0].set_title("Original data")
-        # self.data_loader.data.boxplot(ax=axs[0, 0])
-        # axs[0, 1].set_title("Z-score normalization")
-        # df_zscore_train.boxplot(ax=axs[0, 1])
-        # axs[0, 2].set_title("MinMax normalization")
-        # df_minmax_train.boxplot(ax=axs[0, 2])
-        # # savefig(f"graphs/data_processing/data_scaling/{self.data_loader.file_tag}_different_scaler_comparison.png")
-        # show()
+        return techniques, df_zscore_train, df_zscore_test, df_minmax_train, df_minmax_test
 
     def apply_best_scaling_approach(self, best_technique, techniques, X_train = None, y_train = None, X_test = None, y_test = None):
         """
@@ -628,10 +658,8 @@ class DataProcessing:
         print(f"Class distribution before balancing: {target_count.to_dict()}")
 
         techniques = {"Original": self.previous_accuracy}
-        print(f"Original Dataset performance: {self.previous_accuracy}")
 
         # Random Undersampling
-        print("\nApplying Random Undersampling...")
         df_positives = data_train[data_train[self.target] == positive_class]
         df_negatives = data_train[data_train[self.target] == negative_class].sample(len(df_positives), random_state=42)
         df_under = pd.concat([df_positives, df_negatives], axis=0)
@@ -643,10 +671,8 @@ class DataProcessing:
             "Balancing_Undersampling",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - Undersampling"
         )
-        print(f"Undersampling performance: {techniques['Undersampling']}")
 
         # Random Oversampling
-        print("\nApplying Random Oversampling...")
         df_negatives = data_train[data_train[self.target] == negative_class]
         df_positives = data_train[data_train[self.target] == positive_class].sample(len(df_negatives), replace=True,
                                                                                     random_state=42)
@@ -659,10 +685,8 @@ class DataProcessing:
             "Balancing_Oversampling",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - Oversampling"
         )
-        print(f"Oversampling performance: {techniques['Oversampling']}")
 
         # SMOTE
-        print("\nApplying SMOTE...")
         smote = SMOTE(sampling_strategy="minority", random_state=42)
         X = data_train.drop(columns=[self.target])
         y = data_train[self.target]
@@ -675,7 +699,11 @@ class DataProcessing:
             "Balancing_SMOTE",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - SMOTE"
         )
-        print(f"SMOTE performance: {techniques['SMOTE']}")
+
+        # Print all performances at the end
+        print("\nSummary of Balancing Techniques:")
+        for technique, performance in techniques.items():
+            print(f"{technique} performance: {performance}")
 
         return techniques, df_under, df_over, smote_X, smote_y
 
