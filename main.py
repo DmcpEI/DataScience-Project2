@@ -169,8 +169,8 @@ y2_train.to_csv("data/class_financial_distress_ytrain_scaling.csv", index=False)
 y2_test.to_csv("data/class_financial_distress_ytest_scaling.csv", index=False)
 
 # Handle Feature Selection
-# data_processing1.handle_feature_selection()
-# data_processing2.handle_feature_selection()
+data_processing1.handle_feature_selection(X1_train, X1_test, y1_train, y1_test)
+data_processing2.handle_feature_selection(X2_train, X2_test, y2_train, y2_test)
 
 # Handle Balancing
 techniques1, df_under1, df_over1, smote_X1, smote_y1 = data_processing1.handle_balancing()

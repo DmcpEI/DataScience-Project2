@@ -1,14 +1,16 @@
+from math import ceil
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from pandas import read_csv, DataFrame, Series
+from pandas import read_csv, DataFrame, Series, Index
 from matplotlib.pyplot import subplots, show, savefig, figure
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from dslabs_functions import determine_outlier_thresholds_for_var, run_NB, run_KNN, CLASS_EVAL_METRICS, \
-    plot_multibar_chart, get_variable_types, concat
+    plot_multibar_chart, get_variable_types, concat, plot_multiline_chart, HEIGHT
 from imblearn.over_sampling import SMOTE
 from numpy import ndarray
 
@@ -554,89 +556,6 @@ class DataProcessing:
 
         self.previous_accuracy = techniques[best_technique]
 
-    def handle_feature_selection(self):
-        """
-        Performs feature selection using:
-        - Dropping Low Variance Variables
-        - Dropping Redundant Variables (via correlation)
-        The best dataset configuration is selected based on model performance.
-        Tracks and reports the selected and dropped variables.
-        """
-        print("\nStarting feature selection...")
-
-        X = self.data_loader.data.drop(columns=[self.target])
-        y = self.data_loader.data[self.target]
-
-        techniques = {}
-        dropped_features = {}
-
-        # Original Dataset (Baseline)
-        print("\nEvaluating Original Dataset (No Feature Selection)...")
-        results_original = self.evaluate_step(X, y)
-        print(f"Original Dataset performance: {results_original}")
-        techniques['Original'] = results_original
-        dropped_features['Original'] = []
-
-        # Dropping Low Variance Variables
-        print("\nEvaluating Low Variance Feature Selection...")
-        low_variance_filter = VarianceThreshold(threshold=0.01)  # Adjust threshold as necessary
-        low_variance_filter.fit(X)  # Fit the filter to the data
-        low_variance_support = low_variance_filter.get_support()  # Get the mask for retained features
-        X_low_variance = pd.DataFrame(
-            low_variance_filter.transform(X),  # Use transform to apply the filter
-            columns=X.columns[low_variance_support]
-        )
-
-        dropped_low_variance = X.columns[~low_variance_support].tolist()
-        dropped_features['Low Variance'] = dropped_low_variance
-
-        if not X_low_variance.empty:
-            results_low_variance = self.evaluate_step(X_low_variance, y)
-            print(f"Low Variance Feature Selection performance: {results_low_variance}")
-            print(f"Dropped Low Variance Variables: {dropped_low_variance}")
-            techniques['Low Variance'] = results_low_variance
-        else:
-            print("Low Variance Feature Selection resulted in an empty dataset.")
-            techniques['Low Variance'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
-
-        # Dropping Redundant Variables (via correlation)
-        print("\nEvaluating Redundant Feature Removal...")
-        correlation_matrix = X.corr().abs()
-        upper_triangle = correlation_matrix.where(np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool))
-        redundant_features = [column for column in upper_triangle.columns if
-                              any(upper_triangle[column] > 0.95)]  # Threshold = 0.95
-        X_redundant_removed = X.drop(columns=redundant_features)
-
-        dropped_features['Redundant'] = redundant_features
-
-        if not X_redundant_removed.empty:
-            results_redundant = self.evaluate_step(X_redundant_removed, y)
-            print(f"Redundant Feature Removal performance: {results_redundant}")
-            print(f"Dropped Redundant Variables: {redundant_features}")
-            techniques['Redundant'] = results_redundant
-        else:
-            print("Redundant Feature Removal resulted in an empty dataset.")
-            techniques['Redundant'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
-
-        # Compare techniques and choose the best one
-        best_technique = max(techniques, key=lambda k: techniques[k]['average_accuracy'])
-        print(f"\nBest technique: {best_technique} with accuracy: {techniques[best_technique]}")
-
-        # Apply the best technique to the dataset
-        if best_technique == 'Original':
-            print("No changes made to the dataset (original features retained).")
-            selected_features = X.columns.tolist()
-        elif best_technique == 'Low Variance':
-            self.data_loader.data = pd.concat([X_low_variance, y], axis=1)
-            selected_features = X_low_variance.columns.tolist()
-        elif best_technique == 'Redundant':
-            self.data_loader.data = pd.concat([X_redundant_removed, y], axis=1)
-            selected_features = X_redundant_removed.columns.tolist()
-
-        print(f"\nSelected Features: {selected_features}")
-        print(f"Dropped Features for {best_technique}: {dropped_features[best_technique]}")
-        print("Feature selection completed.")
-
     def handle_balancing(self):
         """
         Handles class imbalance using undersampling, oversampling, and SMOTE techniques,
@@ -728,3 +647,112 @@ class DataProcessing:
                 self.y_train = y_train
 
         self.previous_accuracy = techniques[best_technique]
+
+    def handle_feature_selection(self, X_train, X_test, y_train, y_test):
+
+        vars_to_drop = self.select_low_variance_variables(max_threshold=3)
+        print(f"Variables to drop: {vars_to_drop}")
+        self.study_variance(X_train, X_test, y_train, y_test, max_threshold=1, lag=0.05, metric="accuracy",
+                            file_tag="ny_arrests_variance")
+        # self.apply_feature_selection(vars_to_drop, file_tag="ny_arrests_feature_selection")
+
+    def select_low_variance_variables(self, max_threshold: float) -> list[str]:
+        """
+        Identifies low-variance variables to drop based on the threshold.
+        :param max_threshold: Maximum variance threshold for feature selection.
+        :return: List of variable names to drop.
+        """
+        data: DataFrame = self.data_loader.data
+        summary5: DataFrame = data.describe()
+        vars2drop: Index[str] = summary5.columns[
+            summary5.loc["std"] * summary5.loc["std"] < max_threshold
+            ]
+        vars2drop = vars2drop.drop(self.target) if self.target in vars2drop else vars2drop
+        return list(vars2drop.values)
+
+    def study_variance(self, X_train: DataFrame, X_test: DataFrame, y_train: DataFrame, y_test: DataFrame,
+                       max_threshold: float = 1, lag: float = 0.1,
+                       metric: str = "accuracy", file_tag: str = ""):
+        """
+        Studies the impact of low variance thresholds on model performance.
+
+        :param max_threshold: Maximum variance threshold to test.
+        :param lag: Step size for thresholds.
+        :param metric: Evaluation metric (e.g., accuracy, recall).
+        :param file_tag: Tag to use for saving the plot file.
+        """
+
+        # Generate a list of threshold options to test the impact of different thresholds
+        threshold_options: list[float] = [
+            round(i * lag, 3) for i in range(1, ceil(max_threshold / lag + lag))
+        ]
+        results: dict[str, dict[float, list]] = {"NB": {}, "KNN": {}}  # Dictionary to store results
+        summary: DataFrame = X_train.describe()  # Get summary statistics of the training data
+
+        # Iterate over each threshold option
+        for thresh in threshold_options:
+            # Identify variables with variance below the threshold
+            vars2drop: Index[str] = summary.columns[
+                summary.loc["std"] * summary.loc["std"] < thresh
+                ]
+            # if the target is in the variables to drop, remove it from that list
+            if self.target in vars2drop:
+                vars2drop = vars2drop.drop(self.target)
+
+            # Drop the low variance variables from the training and testing datasets
+            X_train_processed: DataFrame = X_train.drop(vars2drop, axis=1, inplace=False)
+            X_test_processed: DataFrame = X_test.drop(vars2drop, axis=1, inplace=False)
+
+            # Evaluate the model performance with the selected variables
+            eval: dict[str, list] | None = self.evaluate_step(
+                X_train_processed, X_test_processed, y_train, y_test,
+                dataset=self.data_loader.file_tag, file_tag=f"{file_tag}_low_var_{thresh}",
+                metric=metric, plot_title=f"Evaluation for {self.data_loader.file_tag} - Low Variance ({thresh})"
+            )
+            if eval:
+                results["NB"][thresh] = eval[metric][0]
+                results["KNN"][thresh] = eval[metric][1]
+
+            #print(results)
+
+        # Prepare lists for each model
+        nb_metrics = []
+        knn_metrics = []
+        for threshold in threshold_options:
+            # For each threshold, get the corresponding metric value for Naive Bayes and KNN
+            nb_metrics.append(results["NB"].get(threshold, None))  # Directly append the value if it's a float
+            knn_metrics.append(results["KNN"].get(threshold, None))  # Same for KNN
+
+        # Plot the results
+        figure(figsize=(2 * HEIGHT, HEIGHT))
+        plot_multiline_chart(
+            threshold_options,
+            {"NB": nb_metrics, "KNN": knn_metrics},
+            title=f"{file_tag} variance study ({metric})",
+            xlabel="Variance Threshold",
+            ylabel=metric,
+            percentage=True,
+        )
+        savefig(f"graphs/{file_tag}_fs_low_var_{metric}_study.png")
+        show()
+
+    def apply_feature_selection(self, vars2drop: list[str], file_tag: str):
+        """
+        Applies the feature selection to training and testing datasets.
+        :param vars2drop: List of variables to drop.
+        """
+        train = self.data_loader.data.drop(columns=[self.target])
+        test = self.data_loader.data[self.target]
+
+        train_copy: DataFrame = train.drop(vars2drop, axis=1, inplace=False)
+        test_copy: DataFrame = test.drop(vars2drop, axis=1, inplace=False)
+
+        # Save processed files
+        train_copy.to_csv(f"data/{file_tag}_train_lowvar.csv", index=True)
+        test_copy.to_csv(f"data/{file_tag}_test_lowvar.csv", index=True)
+
+        # Update the data loader
+        self.data_loader.train = train_copy
+        self.data_loader.test = test_copy
+
+        print(f"Feature selection applied. Train shape: {train_copy.shape}, Test shape: {test_copy.shape}")
