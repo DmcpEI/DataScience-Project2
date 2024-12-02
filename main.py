@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from classes.DataLoader import DataManipulator
 from classes.DataProfiling import DataProfiling
 from classes.DataProcessing import DataProcessing
+from classes.DataModeling import DataModeling
 
 # %% 0- Data Loading
 
@@ -37,39 +38,39 @@ data_processing2 = DataProcessing(data_loader2)
 data_processing1.pre_encode_variables()
 
 # Data Dimensionality
-data_profiling1.plot_records_variables()
+# data_profiling1.plot_records_variables()
 # data_profiling2.plot_records_variables()
-data_profiling1.plot_variable_types()
+# data_profiling1.plot_variable_types()
 # data_profiling2.plot_variable_types()
-data_profiling1.plot_missing_values()
+# data_profiling1.plot_missing_values()
 # data_profiling2.plot_missing_values()
 
 # Data Distribution
-data_profiling1.plot_global_boxplots()
+# data_profiling1.plot_global_boxplots()
 # data_profiling2.plot_global_boxplots()
-data_profiling1.plot_single_variable_boxplots()
+# data_profiling1.plot_single_variable_boxplots()
 # data_profiling2.plot_single_variable_boxplots()
-data_profiling1.plot_histograms()
+# data_profiling1.plot_histograms()
 # data_profiling2.plot_histograms()
-data_profiling1.plot_histograms_distribution()
+# data_profiling1.plot_histograms_distribution()
 # data_profiling2.plot_histograms_distribution()
-data_profiling1.plot_outlier_comparison()
+# data_profiling1.plot_outlier_comparison()
 # data_profiling2.plot_outlier_comparison()
-data_profiling1.plot_class_distribution()
+# data_profiling1.plot_class_distribution()
 # data_profiling2.plot_class_distribution()
 
 # Data Granularity
-data_profiling1.plot_date_granularity_analysis()
-data_profiling1.plot_location_granularity_analysis()
-data_profiling1.plot_law_code_granularity_analysis()
-data_profiling1.plot_borough_granularity_analysis()
-data_profiling1.plot_age_granularity_analysis()
-data_profiling1.plot_race_granularity_analysis()
+# data_profiling1.plot_date_granularity_analysis()
+# data_profiling1.plot_location_granularity_analysis()
+# data_profiling1.plot_law_code_granularity_analysis()
+# data_profiling1.plot_borough_granularity_analysis()
+# data_profiling1.plot_age_granularity_analysis()
+# data_profiling1.plot_race_granularity_analysis()
 
 # Data Sparsity
-data_profiling1.plot_sparsity_analysis()
+# data_profiling1.plot_sparsity_analysis()
 # data_profiling2.plot_sparsity_analysis()
-data_profiling1.plot_sparsity_analysis_per_class()
+# data_profiling1.plot_sparsity_analysis_per_class()
 # data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
@@ -78,7 +79,7 @@ data_processing1.encode_variables()
 data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
 
 # Data Correlation
-data_profiling1.plot_correlation_analysis()
+# data_profiling1.plot_correlation_analysis()
 # data_profiling2.plot_correlation_analysis()
 
 # %% 2- Data Processing
