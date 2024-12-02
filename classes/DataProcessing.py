@@ -139,7 +139,7 @@ class DataProcessing:
         """
         Drop variables that are false predictions or irrelevant
         """
-        if self.data_loader.target == "LAW_CAT_CD":
+        if self.target == "LAW_CAT_CD":
 
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
             print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification task.")
@@ -159,7 +159,7 @@ class DataProcessing:
             # self.data_loader.data.drop(columns=['LAW_CODE'], inplace=True)
             # print("Dropped 'LAW_CODE' variable for being a false predictor.")
 
-        elif self.data_loader.target == "CLASS":
+        elif self.target == "CLASS":
 
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
             print("\nDropped 'Financial Distress' variable for being a false predictor.")
