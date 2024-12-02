@@ -12,12 +12,17 @@ from classes.DataProcessing import DataProcessing
 path_dataset1_class = "data/class_ny_arrests.csv"
 path_dataset2_class = "data/class_financial distress.csv"
 
-data_loader1 = DataManipulator(path_dataset1_class, "LAW_CAT_CD")
+data_loader1 = DataManipulator(path_dataset1_class, "JURISDICTION_CODE")
 data_loader2 = DataManipulator(path_dataset2_class, "CLASS")
 
 # Display the data
 print(data_loader1.data.head())
 print(data_loader2.data.head())
+
+# Sample the data of NY Arrests
+print(f"\nSampling 100000 records from the NY Arrests dataset...")
+data_loader1.data = data_loader1.data.sample(n=100000, random_state=42)
+print(f"Dataset successfully sampled to 100000 records.")
 
 # %% 1- Data Profiling
 
@@ -25,50 +30,47 @@ print(data_loader2.data.head())
 data_profiling1 = DataProfiling(data_loader1)
 data_profiling2 = DataProfiling(data_loader2)
 
-# Data Dimensionality
-# data_profiling1.plot_records_variables()
-# data_profiling2.plot_records_variables()
-# data_profiling1.plot_variable_types()
-# data_profiling2.plot_variable_types()
-# data_profiling1.plot_missing_values()
-# data_profiling2.plot_missing_values()
-
-# Data Distribution
-# data_profiling1.plot_global_boxplots()
-# data_profiling2.plot_global_boxplots()
-# data_profiling1.plot_single_variable_boxplots()
-# data_profiling2.plot_single_variable_boxplots()
-# data_profiling1.plot_histograms()
-# data_profiling2.plot_histograms()
-# data_profiling1.plot_histograms_distribution()
-# data_profiling2.plot_histograms_distribution()
-# data_profiling1.plot_outlier_comparison()
-# data_profiling2.plot_outlier_comparison()
-# data_profiling1.plot_class_distribution()
-# data_profiling2.plot_class_distribution()
-
-# Data Granularity
-# data_profiling1.plot_date_granularity_analysis()
-# data_profiling1.plot_location_granularity_analysis()
-# data_profiling1.plot_law_code_granularity_analysis()
-# data_profiling1.plot_borough_granularity_analysis()
-# data_profiling1.plot_age_granularity_analysis()
-# data_profiling1.plot_race_granularity_analysis()
-
-# Data Sparsity
-# data_profiling1.plot_sparsity_analysis()
-# data_profiling2.plot_sparsity_analysis()
-# data_profiling1.plot_sparsity_analysis_per_class()
-# data_profiling2.plot_sparsity_analysis_per_class()
-
-# Sample the data of NY Arrests
-print(f"\nSampling 100000 records from the NY Arrests dataset...")
-data_loader1.data = data_loader1.data.sample(n=100000, random_state=42)
-print(f"Dataset successfully sampled to 100000 records.")
-
 # Data Processing
 data_processing1 = DataProcessing(data_loader1)
 data_processing2 = DataProcessing(data_loader2)
+
+data_processing1.pre_encode_variables()
+
+# Data Dimensionality
+data_profiling1.plot_records_variables()
+# data_profiling2.plot_records_variables()
+data_profiling1.plot_variable_types()
+# data_profiling2.plot_variable_types()
+data_profiling1.plot_missing_values()
+# data_profiling2.plot_missing_values()
+
+# Data Distribution
+data_profiling1.plot_global_boxplots()
+# data_profiling2.plot_global_boxplots()
+data_profiling1.plot_single_variable_boxplots()
+# data_profiling2.plot_single_variable_boxplots()
+data_profiling1.plot_histograms()
+# data_profiling2.plot_histograms()
+data_profiling1.plot_histograms_distribution()
+# data_profiling2.plot_histograms_distribution()
+data_profiling1.plot_outlier_comparison()
+# data_profiling2.plot_outlier_comparison()
+data_profiling1.plot_class_distribution()
+# data_profiling2.plot_class_distribution()
+
+# Data Granularity
+data_profiling1.plot_date_granularity_analysis()
+data_profiling1.plot_location_granularity_analysis()
+data_profiling1.plot_law_code_granularity_analysis()
+data_profiling1.plot_borough_granularity_analysis()
+data_profiling1.plot_age_granularity_analysis()
+data_profiling1.plot_race_granularity_analysis()
+
+# Data Sparsity
+data_profiling1.plot_sparsity_analysis()
+# data_profiling2.plot_sparsity_analysis()
+data_profiling1.plot_sparsity_analysis_per_class()
+# data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
 data_processing1.encode_variables()
@@ -76,7 +78,7 @@ data_processing1.encode_variables()
 data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
 
 # Data Correlation
-# data_profiling1.plot_correlation_analysis()
+data_profiling1.plot_correlation_analysis()
 # data_profiling2.plot_correlation_analysis()
 
 # %% 2- Data Processing
@@ -100,13 +102,13 @@ data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
 # data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
 
 # Data Splitting
-X1 = data_loader1.data.drop(columns=["LAW_CAT_CD"])
-y1 = data_loader1.data["LAW_CAT_CD"]
+X1 = data_loader1.data.drop(columns=[data_loader1.target])
+y1 = data_loader1.data[data_loader1.target]
 X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y1, test_size=0.3, random_state=42)
 data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test = X1_train, y1_train, X1_test, y1_test
 
-X2 = data_loader2.data.drop(columns=["CLASS"])
-y2 = data_loader2.data["CLASS"]
+X2 = data_loader2.data.drop(columns=[data_loader2.target])
+y2 = data_loader2.data[data_loader2.target]
 X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.3, random_state=42)
 data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test = X2_train, y2_train, X2_test, y2_test
 

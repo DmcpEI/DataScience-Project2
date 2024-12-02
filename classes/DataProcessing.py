@@ -26,10 +26,7 @@ class DataProcessing:
         self.y_train = Series()
         self.y_test = Series()
 
-    def encode_variables(self):
-        """
-        Encodes all symbolic variables in the dataset based on the granularity analysis.
-        """
+    def pre_encode_variables(self):
 
         # Encode AGE_GROUP
         print("Encoding AGE_GROUP...")
@@ -38,6 +35,14 @@ class DataProcessing:
             self.data_loader.data['AGE_GROUP'].isin(valid_age_groups), 'UNKNOWN')
         age_group_mapping = {'UNKNOWN': None, '<18': 1, '18-24': 2, '25-44': 3, '45-64': 4, '65+': 5}
         self.data_loader.data['AGE_GROUP'] = self.data_loader.data['AGE_GROUP'].map(age_group_mapping)
+
+        # Encode JURISDICTION_CODE
+        self.data_loader.data['JURISDICTION_CODE'] = self.data_loader.data['JURISDICTION_CODE'].apply(lambda x: 'NY' if x < 3 else 'nonNY')
+
+    def encode_variables(self):
+        """
+        Encodes all symbolic variables in the dataset based on the granularity analysis.
+        """
 
         # Encode ARREST_DATE
         print("Encoding ARREST_DATE...")
@@ -114,6 +119,7 @@ class DataProcessing:
         # Encode LAW_CAT_CD, ARREST_BORO, PERP_SEX, PERP_RACE
         print("Encoding other variables...")
         mapping = {
+            'JURISDICTION_CODE': {'NY': 1, 'nonNY': 0},
             'LAW_CAT_CD': {'F': 1, 'M': 0},
             'ARREST_BORO': {'M': 1, 'B': 2, 'Q': 3, 'K': 4, 'S': 5},
             'PERP_SEX': {'M': 1, 'F': 0},
@@ -135,12 +141,6 @@ class DataProcessing:
         """
         if self.data_loader.target == "LAW_CAT_CD":
 
-            # #Drop all the variables
-            # data1 = self.data_loader.data['PD_CD']
-            # data2 = self.data_loader.data['LAW_CAT_CD']
-            #
-            # self.data_loader.data = pd.concat([data1, data2], axis=1)
-
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
             print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification task.")
 
@@ -156,8 +156,9 @@ class DataProcessing:
             # self.data_loader.data.drop(columns=['KY_CD'], inplace=True)
             # print("\nDropped 'KY_CD' variable for being a false predictor.")
 
-            self.data_loader.data.drop(columns=['LAW_CODE'], inplace=True)
-            print("Dropped 'LAW_CODE' variable for being a false predictor.")
+            # self.data_loader.data.drop(columns=['LAW_CODE'], inplace=True)
+            # print("Dropped 'LAW_CODE' variable for being a false predictor.")
+
         elif self.data_loader.target == "CLASS":
 
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
