@@ -228,6 +228,9 @@ data_modeling2 = DataModeling(data_loader2, X2_train, X2_test, y2_train, y2_test
 # data_modeling2.knn()
 
 # Decision Tree
-data_modeling1.decision_tree()
-data_modeling2.decision_tree()
+# data_modeling1.decision_tree()
+# data_modeling2.decision_tree()
 
+# MLP
+data_modeling1.mlp()
+# data_modeling2.mlp()
