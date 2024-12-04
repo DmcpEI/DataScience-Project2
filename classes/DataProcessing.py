@@ -424,30 +424,22 @@ class DataProcessing:
 
         return techniques, df_train_dropped, df_train_replaced, df_train_truncated
 
-    def apply_best_outliers_approach(self, approach, techniques, X_train = None, y_train = None):
+    def apply_best_outliers_approach(self, best_technique, techniques, X_train = None, y_train = None):
 
         numeric_vars = self.X_train.select_dtypes(include=['float64', 'int64']).columns.tolist()
 
         if not numeric_vars:
             print("There are no numeric variables to process for outliers.")
             return
-        match approach:
-            case 'Original':
+        else:
+            if best_technique == 'Original':
                 print("No changes made to the dataset (original data retained).")
-            case 'Drop':
-                print("Applying Drop Outliers...")
-                self.X_train = X_train
-                self.y_train = y_train
-            case 'Replace':
-                print("Applying Replace Outliers...")
-                self.X_train = X_train
-                self.y_train = y_train
-            case 'Truncate':
-                print("Applying Truncate Outliers...")
+            else:
+                print(f"Applying {best_technique} Outliers...")
                 self.X_train = X_train
                 self.y_train = y_train
 
-        self.previous_accuracy = techniques[approach]
+        self.previous_accuracy = techniques[best_technique]
 
     def handle_scaling(self):
         """
@@ -540,14 +532,8 @@ class DataProcessing:
         """
         if best_technique == 'Original':
             print("No changes made to the dataset (original data retained).")
-        elif best_technique == 'Standard':
-            print("Applying Standard Scaler...")
-            self.X_train = X_train
-            self.y_train = y_train
-            self.X_test = X_test
-            self.y_test = y_test
-        elif best_technique == 'MinMax':
-            print("Applying MinMax Scaler...")
+        else:
+            print(f"Applying {best_technique} Scaler...")
             self.X_train = X_train
             self.y_train = y_train
             self.X_test = X_test
@@ -613,31 +599,30 @@ class DataProcessing:
         """
         Applies the best balancing technique to the dataset.
         """
-        match best_technique:
-            case 'Original':
-                print("No changes made to the dataset (original data retained).")
-            case 'Undersampling':
-                print("Applying Random Undersampling...")
-                self.X_train = X_train
-                self.y_train = y_train
-            case 'Oversampling':
-                print("Applying Random Oversampling...")
-                self.X_train = X_train
-                self.y_train = y_train
-            case 'SMOTE':
-                print("Applying SMOTE...")
-                self.X_train = X_train
-                self.y_train = y_train
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        else:
+            print(f"Applying {best_technique}...")
+            self.X_train = X_train
+            self.y_train = y_train
 
         self.previous_accuracy = techniques[best_technique]
 
     def handle_feature_selection(self):
 
+        print(f"\n\nHandling feature selection for the {self.data_loader.file_tag} dataset...\n")
+
         vars_to_drop = self.select_low_variance_variables(max_threshold=3)
         print(f"Variables to drop: {vars_to_drop}")
         self.study_variance(self.X_train, self.X_test, self.y_train, self.y_test,
-                            max_threshold=1, lag=0.05, metric="accuracy", file_tag=self.data_loader.file_tag)
+                            max_threshold=1, lag=0.05, metric="recall", file_tag=self.data_loader.file_tag)
         # self.apply_feature_selection(vars_to_drop, file_tag="ny_arrests_feature_selection")
+
+        vars_to_drop_2 = self.select_redundant_variables(min_threshold=0.25)
+        print(f"Variables to drop: {vars_to_drop_2}")
+        self.study_redundancy_for_feature_selection(self.X_train, self.X_test, self.y_train, self.y_test,
+                                                    min_threshold=0.3, lag=0.1, metric="recall",
+                                                    file_tag=self.data_loader.file_tag)
 
     def select_low_variance_variables(self, max_threshold: float) -> list[str]:
         """
@@ -740,3 +725,79 @@ class DataProcessing:
         self.data_loader.test = test_copy
 
         print(f"Feature selection applied. Train shape: {train_copy.shape}, Test shape: {test_copy.shape}")
+
+    def select_redundant_variables(self, min_threshold) -> list:
+        df: DataFrame = self.data_loader.data.drop(self.target, axis=1, inplace=False)
+        corr_matrix: DataFrame = abs(df.corr())
+        variables: Index[str] = corr_matrix.columns
+        vars2drop: list = []
+        for v1 in variables:
+            vars_corr: Series = (corr_matrix[v1]).loc[corr_matrix[v1] >= min_threshold]
+            vars_corr.drop(v1, inplace=True)
+            if len(vars_corr) > 1:
+                lst_corr = list(vars_corr.index)
+                for v2 in lst_corr:
+                    if v2 not in vars2drop:
+                        vars2drop.append(v2)
+        return vars2drop
+
+    def study_redundancy_for_feature_selection(
+            self, X_train: DataFrame, X_test: DataFrame, y_train: DataFrame, y_test: DataFrame,
+            min_threshold: float = 0.90,
+            lag: float = 0.05,
+            metric: str = "accuracy",
+            file_tag: str = "",
+    ) -> dict:
+        options: list[float] = [
+            round(min_threshold + i * lag, 3)
+            for i in range(ceil((1 - min_threshold) / lag) + 1)
+        ]
+
+        df: DataFrame = X_train
+        corr_matrix: DataFrame = abs(df.corr())
+        variables: Index[str] = corr_matrix.columns
+        results: dict[str, dict[float, list]] = {"NB": {}, "KNN": {}}  # Dictionary to store results
+        for thresh in options:
+            vars2drop: list = []
+            for v1 in variables:
+                vars_corr: Series = (corr_matrix[v1]).loc[corr_matrix[v1] >= thresh]
+                if v1 in vars_corr.index:  # Check if v1 is in the index
+                    vars_corr.drop(v1, inplace=True)
+                if len(vars_corr) > 1:
+                    lst_corr = list(vars_corr.index)
+                    for v2 in lst_corr:
+                        if v2 not in vars2drop:
+                            vars2drop.append(v2)
+
+            X_train_processed: DataFrame = X_train.drop(vars2drop, axis=1, inplace=False)
+            X_test_processed: DataFrame = X_test.drop(vars2drop, axis=1, inplace=False)
+
+            # Evaluate the model performance with the selected variables
+            eval: dict[str, list] | None = self.evaluate_step(
+                X_train_processed, X_test_processed, y_train, y_test,
+                dataset=self.data_loader.file_tag, file_tag=f"{file_tag}_low_var_{thresh}",
+                metric=metric, plot_title=f"Evaluation for {self.data_loader.file_tag} - Redundancy ({thresh})"
+            )
+            if eval:
+                results["NB"][thresh] = eval[metric][0]
+                results["KNN"][thresh] = eval[metric][1]
+
+        nb_metrics = []
+        knn_metrics = []
+        for threshold in options:
+            # For each threshold, get the corresponding metric value for Naive Bayes and KNN
+            nb_metrics.append(results["NB"].get(threshold, None))  # Directly append the value if it's a float
+            knn_metrics.append(results["KNN"].get(threshold, None))  # Same for KNN
+
+        # Plot the results
+        figure(figsize=(2 * HEIGHT, HEIGHT))
+        plot_multiline_chart(
+            options,
+            {"NB": nb_metrics, "KNN": knn_metrics},
+            title=f"{file_tag} redundancy study ({metric})",
+            xlabel="correlation threshold",
+            ylabel=metric,
+            percentage=True,
+        )
+        savefig(f"graphs/data_preparation/{file_tag}_fs_redundancy_{metric}_study.png")
+        show()
