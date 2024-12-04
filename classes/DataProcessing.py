@@ -23,8 +23,8 @@ class DataProcessing:
         self.previous_accuracy = {}
         self.X_train = DataFrame()
         self.X_test = DataFrame()
-        self.y_train = Series()
-        self.y_test = Series()
+        self.y_train = DataFrame()
+        self.y_test = DataFrame()
 
     def pre_encode_variables(self):
 
@@ -239,26 +239,26 @@ class DataProcessing:
         symbolic_columns = variable_types["symbolic"]
 
         # Split data into training and test sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
         # Dictionary to store results
         techniques = {}
 
-        # Row Removal
-        data_removed = self.data_loader.data.dropna()
+        # Row Removal on training data
+        X_train_removed = X_train.dropna()
+        y_train_removed = y_train[X_train_removed.index]
 
-        if not data_removed.empty:  # Ensure removal doesn't leave the dataset empty
-            X_removed = data_removed.drop(columns=[self.target])
-            y_removed = data_removed[self.target]
-            X_train_removed, X_test_removed, y_train_removed, y_test_removed = train_test_split(
-                X_removed, y_removed, test_size=0.2, random_state=42
-            )
-            results_removal = self.evaluate_step(
+        if not X_train_removed.empty:  # Ensure removal doesn't leave the dataset empty
+            # Ensure the test set remains consistent
+            X_test_removed = X_test.dropna()
+            y_test_removed = y_test[X_test_removed.index]
+
+            techniques['Remove MV'] = self.evaluate_step(
                 X_train_removed, X_test_removed, y_train_removed, y_test_removed,
                 self.data_loader.file_tag, "MV_Row_Removal",
                 plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Row Removal"
             )
-            techniques['Remove MV'] = results_removal
+
         else:
             print("\nRow Removal skipped (would result in an empty dataset).")
             techniques['Remove MV'] = {'knn': 0, 'nb': 0, 'average_accuracy': 0}
@@ -276,12 +276,11 @@ class DataProcessing:
             X_train_mean[symbolic_columns] = imputer_most_frequent.fit_transform(X_train[symbolic_columns])
             X_test_mean[symbolic_columns] = imputer_most_frequent.transform(X_test[symbolic_columns])
 
-        results_mean_most_frequent = self.evaluate_step(
+        techniques['Mean & Most Frequent'] = self.evaluate_step(
             X_train_mean, X_test_mean, y_train, y_test,
             self.data_loader.file_tag, "MV_Mean_Most_Frequent_Imputation",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Mean & Most Frequent Imputation"
         )
-        techniques['Mean & Most Frequent'] = results_mean_most_frequent
 
         # Median & Most Frequent Imputation
         imputer_median_numeric = SimpleImputer(strategy='median')
@@ -295,12 +294,11 @@ class DataProcessing:
             X_train_median[symbolic_columns] = imputer_most_frequent.fit_transform(X_train[symbolic_columns])
             X_test_median[symbolic_columns] = imputer_most_frequent.transform(X_test[symbolic_columns])
 
-        results_median_most_frequent = self.evaluate_step(
+        techniques['Median & Most Frequent'] = self.evaluate_step(
             X_train_median, X_test_median, y_train, y_test,
             self.data_loader.file_tag, "MV_Median_Most_Frequent_Imputation",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Median & Most Frequent Imputation"
         )
-        techniques['Median & Most Frequent'] = results_median_most_frequent
 
         # Print all performances at the end
         print("\nSummary of Missing Value Handling Techniques:")
@@ -564,14 +562,8 @@ class DataProcessing:
         """
         print(f"\n\nHandling balancing for the {self.data_loader.file_tag} dataset...\n")
 
-        # Combine training data and target for easier processing
-        data_train = pd.concat([self.X_train, self.y_train], axis=1)
-
-        # Ensure no duplicate columns
-        data_train = data_train.loc[:, ~data_train.columns.duplicated()]
-
         # Get class counts and identify minority and majority classes
-        target_count = data_train[self.target].value_counts()
+        target_count = self.y_train.value_counts()
         positive_class = target_count.idxmin()
         negative_class = target_count.idxmax()
 
@@ -580,42 +572,32 @@ class DataProcessing:
         techniques = {"Original": self.previous_accuracy}
 
         # Random Undersampling
-        df_positives = data_train[data_train[self.target] == positive_class]
-        df_negatives = data_train[data_train[self.target] == negative_class].sample(len(df_positives), random_state=42)
-        df_under = pd.concat([df_positives, df_negatives], axis=0)
-        X_train_under, X_test_under, y_train_under, y_test_under = train_test_split(
-            df_under.drop(columns=[self.target]), df_under[self.target], test_size=0.3, random_state=42
-        )
+        positives = self.X_train[self.y_train == positive_class]
+        negatives = self.X_train[self.y_train == negative_class].sample(len(positives), random_state=42)
+        X_train_under = pd.concat([positives, negatives])
+        y_train_under = pd.concat([self.y_train[positives.index], self.y_train[negatives.index]])
         techniques["Undersampling"] = self.evaluate_step(
-            X_train_under, X_test_under, y_train_under, y_test_under, self.data_loader.file_tag,
+            X_train_under, self.X_test, y_train_under, self.y_test, self.data_loader.file_tag,
             "Balancing_Undersampling",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - Undersampling"
         )
 
         # Random Oversampling
-        df_negatives = data_train[data_train[self.target] == negative_class]
-        df_positives = data_train[data_train[self.target] == positive_class].sample(len(df_negatives), replace=True,
-                                                                                    random_state=42)
-        df_over = pd.concat([df_positives, df_negatives], axis=0)
-        X_train_over, X_test_over, y_train_over, y_test_over = train_test_split(
-            df_over.drop(columns=[self.target]), df_over[self.target], test_size=0.3, random_state=42
-        )
+        negatives = self.X_train[self.y_train == negative_class]
+        positives = self.X_train[self.y_train == positive_class].sample(len(negatives), replace=True, random_state=42)
+        X_train_over = pd.concat([positives, negatives])
+        y_train_over = pd.concat([self.y_train[positives.index], self.y_train[negatives.index]])
         techniques["Oversampling"] = self.evaluate_step(
-            X_train_over, X_test_over, y_train_over, y_test_over, self.data_loader.file_tag,
+            X_train_over, self.X_test, y_train_over, self.y_test, self.data_loader.file_tag,
             "Balancing_Oversampling",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - Oversampling"
         )
 
         # SMOTE
         smote = SMOTE(sampling_strategy="minority", random_state=42)
-        X = data_train.drop(columns=[self.target])
-        y = data_train[self.target]
-        smote_X, smote_y = smote.fit_resample(X, y)
-        X_train_smote, X_test_smote, y_train_smote, y_test_smote = train_test_split(
-            smote_X, smote_y, test_size=0.3, random_state=42
-        )
+        X_train_smote, y_train_smote = smote.fit_resample(self.X_train, self.y_train)
         techniques["SMOTE"] = self.evaluate_step(
-            X_train_smote, X_test_smote, y_train_smote, y_test_smote, self.data_loader.file_tag,
+            X_train_smote, self.X_test, y_train_smote, self.y_test, self.data_loader.file_tag,
             "Balancing_SMOTE",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - SMOTE"
         )
@@ -625,7 +607,7 @@ class DataProcessing:
         for technique, performance in techniques.items():
             print(f"{technique} performance: {performance}")
 
-        return techniques, df_under, df_over, smote_X, smote_y
+        return techniques, X_train_under, y_train_under, X_train_over, y_train_over, X_train_smote, y_train_smote
 
     def apply_best_balancing_approach(self, best_technique, techniques, X_train = None, y_train = None):
         """
@@ -649,12 +631,12 @@ class DataProcessing:
 
         self.previous_accuracy = techniques[best_technique]
 
-    def handle_feature_selection(self, X_train, X_test, y_train, y_test):
+    def handle_feature_selection(self):
 
         vars_to_drop = self.select_low_variance_variables(max_threshold=3)
         print(f"Variables to drop: {vars_to_drop}")
-        self.study_variance(X_train, X_test, y_train, y_test, max_threshold=1, lag=0.05, metric="accuracy",
-                            file_tag="ny_arrests_variance")
+        self.study_variance(self.X_train, self.X_test, self.y_train, self.y_test,
+                            max_threshold=1, lag=0.05, metric="accuracy", file_tag=self.data_loader.file_tag)
         # self.apply_feature_selection(vars_to_drop, file_tag="ny_arrests_feature_selection")
 
     def select_low_variance_variables(self, max_threshold: float) -> list[str]:
@@ -711,6 +693,7 @@ class DataProcessing:
                 metric=metric, plot_title=f"Evaluation for {self.data_loader.file_tag} - Low Variance ({thresh})"
             )
             if eval:
+                print("Evaluation results for threshold", thresh, ":", eval)
                 results["NB"][thresh] = eval[metric][0]
                 results["KNN"][thresh] = eval[metric][1]
 
@@ -734,7 +717,7 @@ class DataProcessing:
             ylabel=metric,
             percentage=True,
         )
-        savefig(f"graphs/{file_tag}_fs_low_var_{metric}_study.png")
+        savefig(f"graphs/data_preparation/{file_tag}_fs_low_var_{metric}_study.png")
         show()
 
     def apply_feature_selection(self, vars2drop: list[str], file_tag: str):
