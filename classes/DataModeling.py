@@ -161,7 +161,7 @@ class DataModeling:
                     best_model = clf
                 # print(f'KNN {d} k={k}')
             values[d] = y_tst_values
-        print(f'KNN best with k={best_params['params'][0]} and {best_params['params'][1]}')
+        print(f"KNN best with k={best_params['params'][0]} and {best_params['params'][1]}")
         plot_multiline_chart(kvalues, values, title=f'KNN Models ({metric}) - {dataset}', xlabel='k', ylabel=metric,
                              percentage=True)
 
@@ -280,7 +280,7 @@ class DataModeling:
                     best_model = clf
                 # print(f'DT {c} and d={d}')
             values[c] = y_tst_values
-        print(f'DT best with {best_params['params'][0]} and d={best_params['params'][1]}')
+        print(f"DT best with {best_params['params'][0]} and d={best_params['params'][1]}")
         plot_multiline_chart(depths, values, title=f'DT Models ({metric}) - {dataset}', xlabel='d', ylabel=metric, percentage=True)
 
         return best_model, best_params

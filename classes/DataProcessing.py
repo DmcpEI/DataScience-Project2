@@ -9,6 +9,8 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+
 from dslabs_functions import determine_outlier_thresholds_for_var, run_NB, run_KNN, CLASS_EVAL_METRICS, \
     plot_multibar_chart, get_variable_types, concat, plot_multiline_chart, HEIGHT
 from imblearn.over_sampling import SMOTE
@@ -70,7 +72,6 @@ class DataProcessing:
 
         # Encode PD_DESC
         print("Encoding PD_DESC...")
-        from sklearn.feature_extraction.text import CountVectorizer
 
         vectorizer_pd = CountVectorizer(stop_words='english', token_pattern=r'\b[a-zA-Z]+\b', max_features=20)
         word_matrix_pd = vectorizer_pd.fit_transform(self.data_loader.data['PD_DESC'].fillna(''))
