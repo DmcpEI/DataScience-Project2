@@ -649,7 +649,7 @@ class DataModeling:
             imp_values.append(importances[indices[f]])
             print(f"{f+1}. {elems[f]} ({importances[indices[f]]})")
 
-        figure()
+        figure(figsize=(11, 11))
         plot_horizontal_bar_chart(
             elems,
             imp_values,
@@ -793,7 +793,7 @@ class DataModeling:
             imp_values.append(importances[indices[f]])
             print(f"{f+1}. {elems[f]} ({importances[indices[f]]})")
 
-        figure()
+        figure(figsize=(11, 11))
         plot_horizontal_bar_chart(
             elems,
             imp_values,
