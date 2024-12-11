@@ -766,7 +766,7 @@ class DataModeling:
             lag=250,
             metric=eval_metric,
         )
-        savefig(f"graphs/gb/{self.data_loader.file_tag}_gb_{eval_metric}_study.png")
+        savefig(f"graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_study.png")
         show()
 
         # Best Model Performance Analysis

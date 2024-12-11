@@ -270,11 +270,11 @@ data_modeling2 = DataModeling(data_loader2, X2_train, X2_test, y2_train, y2_test
 # data_modeling2.mlp()
 
 # Random Forests
-print("Handling Random Forests classification...")
-data_modeling1.random_forests()
-data_modeling2.random_forests()
+# print("Handling Random Forests classification...")
+# data_modeling1.random_forests()
+# data_modeling2.random_forests()
 
 # Gradient Boosting
-# print("Handling Gradient Boosting classification...")
-# data_modeling1.gradient_boosting()
-# data_modeling2.gradient_boosting()
+print("Handling Gradient Boosting classification...")
+data_modeling1.gradient_boosting()
+data_modeling2.gradient_boosting()
