@@ -165,7 +165,7 @@ class DataProcessing:
         # Encode LAW_CAT_CD, ARREST_BORO, PERP_SEX, PERP_RACE
         print("Encoding other variables...")
         mapping = {
-            'JURISDICTION_CODE': {'NY': 1, 'nonNY': 0},
+            'JURISDICTION_CODE': {'NY': 0, 'nonNY': 1},
             'LAW_CAT_CD': {'F': 1, 'M': 0},
             'ARREST_BORO': {'M': 1, 'B': 2, 'Q': 3, 'K': 4, 'S': 5},
             'PERP_SEX': {'M': 1, 'F': 0},
@@ -185,25 +185,10 @@ class DataProcessing:
         """
         Drop variables that are false predictions or irrelevant
         """
-        if self.target == "LAW_CAT_CD":
+        if self.target == "JURISDICTION_CODE":
 
             self.data_loader.data.drop(columns=['ARREST_KEY'], inplace=True)
             print("\nDropped 'ARREST_KEY' variable for being irrelevant for the classification task.")
-
-            # self.data_loader.data.drop(columns=['PD_DESC'], inplace=True)
-            # print("\nDropped 'PD_DESC' variable for being irrelevant for the classification task.")
-            #
-            # self.data_loader.data.drop(columns=['OFNS_DESC'], inplace=True)
-            # print("\nDropped 'OFNS_DESC' variable for being irrelevant for the classification task.")
-
-            # self.data_loader.data.drop(columns=['PD_CD'], inplace=True)
-            # print("\nDropped 'PD_CD' variable for being a false predictor.")
-            #
-            # self.data_loader.data.drop(columns=['KY_CD'], inplace=True)
-            # print("\nDropped 'KY_CD' variable for being a false predictor.")
-
-            # self.data_loader.data.drop(columns=['LAW_CODE'], inplace=True)
-            # print("Dropped 'LAW_CODE' variable for being a false predictor.")
 
         elif self.target == "CLASS":
 
