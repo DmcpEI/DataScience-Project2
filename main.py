@@ -35,7 +35,7 @@ data_profiling2 = DataProfiling(data_loader2)
 data_processing1 = DataProcessing(data_loader1)
 data_processing2 = DataProcessing(data_loader2)
 
-# data_processing1.pre_encode_variables()
+data_processing1.pre_encode_variables()
 
 # Data Dimensionality
 # data_profiling1.plot_records_variables()
@@ -74,9 +74,9 @@ data_processing2 = DataProcessing(data_loader2)
 # data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
-# data_processing1.encode_variables()
+data_processing1.encode_variables()
 # Save the encoded data
-# data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
+data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
 
 # Data Correlation
 # data_profiling1.plot_correlation_analysis()
@@ -275,6 +275,6 @@ data_modeling2 = DataModeling(data_loader2, X2_train, X2_test, y2_train, y2_test
 # data_modeling2.random_forests()
 
 # Gradient Boosting
-print("Handling Gradient Boosting classification...")
-data_modeling1.gradient_boosting()
-data_modeling2.gradient_boosting()
+# print("Handling Gradient Boosting classification...")
+# data_modeling1.gradient_boosting()
+# data_modeling2.gradient_boosting()

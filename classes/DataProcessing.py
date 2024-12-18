@@ -1,4 +1,4 @@
-from math import ceil
+from math import ceil, log10
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,53 @@ class DataProcessing:
 
         # Encode JURISDICTION_CODE
         self.data_loader.data['JURISDICTION_CODE'] = self.data_loader.data['JURISDICTION_CODE'].apply(lambda x: 'NY' if x < 3 else 'nonNY')
+
+    def encode_law_code(self):
+        # Replace NaN with 'UNKNOWN'
+        self.data_loader.data['LAW_CODE'] = self.data_loader.data['LAW_CODE'].fillna('UNKNOWN')
+
+        # Extract prefix and suffix, leaving 'UNKNOWN' unchanged
+        self.data_loader.data['prefix'] = self.data_loader.data['LAW_CODE'].apply(lambda x: x[:3] if x != 'UNKNOWN' else 'UNK')
+        self.data_loader.data['suffix'] = self.data_loader.data['LAW_CODE'].apply(lambda x: x[3:].strip() if x != 'UNKNOWN' else 'UNKNOWN')
+
+        # Initialize LabelEncoders
+        prefix_encoder = LabelEncoder()
+        suffix_encoder = LabelEncoder()
+
+        # Fit encoders only on unique, non-'UNKNOWN' values
+        prefix_values = self.data_loader.data.loc[self.data_loader.data['prefix'] != 'UNK', 'prefix'].unique()
+        suffix_values = self.data_loader.data.loc[self.data_loader.data['suffix'] != 'UNKNOWN', 'suffix'].unique()
+
+        prefix_encoder.fit(prefix_values)
+        suffix_encoder.fit(suffix_values)
+
+        # Encode prefix and suffix, keeping 'UNKNOWN' as-is
+        self.data_loader.data['prefix_encoded'] = self.data_loader.data['prefix'].apply(lambda x: prefix_encoder.transform([x])[0] if x != 'UNK' else None)
+        self.data_loader.data['suffix_encoded'] = self.data_loader.data['suffix'].apply(lambda x: suffix_encoder.transform([x])[0] if x != 'UNKNOWN' else None)
+
+        # Calculate number of unique suffixes and multiplier
+        num_suffixes = len(suffix_values)
+        num_digits = ceil(log10(num_suffixes)) if num_suffixes > 0 else 1
+        multiplier = 10 ** num_digits
+
+        # Combine prefix and suffix encoding, handling 'UNKNOWN'
+        self.data_loader.data['combined_encoded'] = self.data_loader.data.apply(
+            lambda row: int(row['prefix_encoded'] * multiplier + row['suffix_encoded'])  # Force int type
+            if pd.notna(row['prefix_encoded']) and pd.notna(row['suffix_encoded'])
+            else 'UNKNOWN',
+            axis=1
+        )
+
+        # Explicitly cast numeric values to `int`, leave 'UNKNOWN' as string
+        self.data_loader.data['combined_encoded'] = self.data_loader.data['combined_encoded'].apply(
+            lambda x: int(x) if isinstance(x, (float, int)) and not pd.isna(x) else x
+        )
+
+        # Replace the original LAW_CODE column with combined_encoded
+        self.data_loader.data['LAW_CODE'] = self.data_loader.data['combined_encoded']
+
+        # Drop unnecessary columns
+        self.data_loader.data = self.data_loader.data.drop(columns=['prefix', 'suffix', 'prefix_encoded', 'suffix_encoded', 'combined_encoded'])
 
     def encode_variables(self):
         """
@@ -113,9 +160,7 @@ class DataProcessing:
 
         # Encode LAW_CODE
         print("Encoding LAW_CODE...")
-        label_encoder = LabelEncoder()
-        self.data_loader.data['LAW_CODE'] = label_encoder.fit_transform(
-            self.data_loader.data['LAW_CODE'].fillna('UNKNOWN'))
+        self.encode_law_code()
 
         # Encode LAW_CAT_CD, ARREST_BORO, PERP_SEX, PERP_RACE
         print("Encoding other variables...")
