@@ -1,5 +1,6 @@
 # %% Class Imports
 import pandas as pd
+import json
 from sklearn.model_selection import train_test_split
 
 from classes.DataLoader import DataManipulator
@@ -238,9 +239,17 @@ y2_test = pd.read_csv("data/class_financial_distress_ytest_preparation.csv")
 data_modeling1 = DataModeling(data_loader1, X1_train, X1_test, y1_train, y1_test)
 data_modeling2 = DataModeling(data_loader2, X2_train, X2_test, y2_train, y2_test)
 
+# Initialize a dictionary to store results
+results_summary = {
+    "NY Arrests": {},  # Dataset 1
+    "Financial Distress": {}  # Dataset 2
+}
+
 # Naive Bayes
 # evaluation_results_NB_dataset1 = data_modeling1.naive_bayes()
+# results_summary["NY Arrests"]["Naive Bayes"] = evaluation_results_NB_dataset1
 evaluation_results_NB_dataset2 = data_modeling2.naive_bayes()
+results_summary["Financial Distress"]["Naive Bayes"] = evaluation_results_NB_dataset2
 
 # print("NY Arrests Naive Bayes")
 # print(evaluation_results_NB_dataset1)
@@ -249,7 +258,9 @@ print(evaluation_results_NB_dataset2)
 
 # KNN
 # evaluation_results_KNN_dataset1 = data_modeling1.knn()
+# results_summary["NY Arrests"]["KNN"] = evaluation_results_KNN_dataset1
 evaluation_results_KNN_dataset2 = data_modeling2.knn()
+results_summary["Financial Distress"]["KNN"] = evaluation_results_KNN_dataset2
 
 # print("NY Arrests KNN")
 # print(evaluation_results_KNN_dataset1)
@@ -258,7 +269,9 @@ print(evaluation_results_KNN_dataset2)
 
 # Decision Tree
 # evaluation_results_DT_dataset1 = data_modeling1.decision_tree()
+# results_summary["NY Arrests"]["Decision Tree"] = evaluation_results_DT_dataset1
 evaluation_results_DT_dataset2 = data_modeling2.decision_tree()
+results_summary["Financial Distress"]["Decision Tree"] = evaluation_results_DT_dataset2
 
 # print("NY Arrests Decision Tree")
 # print(evaluation_results_DT_dataset1)
@@ -267,7 +280,9 @@ print(evaluation_results_DT_dataset2)
 
 # MLP
 # evaluation_results_MLP_dataset1 = data_modeling1.mlp()
+# results_summary["NY Arrests"]["MLP"] = evaluation_results_MLP_dataset1
 evaluation_results_MLP_dataset2 = data_modeling2.mlp()
+results_summary["Financial Distress"]["MLP"] = evaluation_results_MLP_dataset2
 
 # print("NY Arrests MLP")
 # print(evaluation_results_MLP_dataset1)
@@ -276,7 +291,9 @@ print(evaluation_results_MLP_dataset2)
 
 # Random Forests
 # evaluation_results_RF_dataset1 = data_modeling1.random_forest()
+# results_summary["NY Arrests"]["Random Forest"] = evaluation_results_RF_dataset1
 evaluation_results_RF_dataset2 = data_modeling2.random_forest()
+results_summary["Financial Distress"]["Random Forest"] = evaluation_results_RF_dataset2
 
 # print("NY Arrests Random Forest")
 # print(evaluation_results_RF_dataset1)
@@ -285,9 +302,19 @@ print(evaluation_results_RF_dataset2)
 
 # Gradient Boosting
 # evaluation_results_GB_dataset1 = data_modeling1.gradient_boosting()
+# results_summary["NY Arrests"]["Gradient Boosting"] = evaluation_results_GB_dataset1
 evaluation_results_GB_dataset2 = data_modeling2.gradient_boosting()
+results_summary["Financial Distress"]["Gradient Boosting"] = evaluation_results_GB_dataset2
 
 # print("NY Arrests Gradient Boosting")
 # print(evaluation_results_GB_dataset1)
 print("Financial Distress Gradient Boosting")
 print(evaluation_results_GB_dataset2)
+
+# Save results to a file (optional)
+with open("classification_evaluation_results_summary.json", "w") as file:
+    json.dump(results_summary, file, indent=4)
+
+# Print the full summary at the end
+print("\nFull Evaluation Results Summary:")
+print(json.dumps(results_summary, indent=4))
