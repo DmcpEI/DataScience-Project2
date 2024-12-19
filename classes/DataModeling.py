@@ -25,6 +25,35 @@ class DataModeling:
         self.y_train = y_train.squeeze()
         self.y_test = y_test.squeeze()
 
+    def plot_evaluation_results(self, model, trn_y, prd_trn, tst_y, prd_tst, labels: ndarray, dataset) -> ndarray:
+        evaluation: dict = {}
+
+        # Calculate metrics for both train and test sets
+        for key in CLASS_EVAL_METRICS:
+            evaluation[key] = [
+                CLASS_EVAL_METRICS[key](trn_y, prd_trn),  # Train metric
+                CLASS_EVAL_METRICS[key](tst_y, prd_tst),  # Test metric
+            ]
+
+        # Prepare the parameters string for the plot title
+        params_st: str = "" if () == model.get("params", ()) else str(model["params"])
+
+        # Create subplots for evaluation metrics and confusion matrix
+        fig: Figure
+        axs: ndarray
+        fig, axs = subplots(1, 2, figsize=(2 * HEIGHT, HEIGHT))
+        fig.suptitle(f'Best {model["metric"]} for {model["name"]} {params_st} - {dataset}')
+
+        # Plot metrics as a bar chart
+        plot_multibar_chart(["Train", "Test"], evaluation, ax=axs[0], percentage=True)
+
+        # Compute and plot confusion matrix
+        cnf_mtx_tst: ndarray = confusion_matrix(tst_y, prd_tst, labels=labels)
+        plot_confusion_matrix(cnf_mtx_tst, labels, ax=axs[1])
+
+        # Return the evaluation results
+        return evaluation
+
     def naive_Bayes_study(
             self, trnX: ndarray, trnY: array, tstX: ndarray, tstY: array, metric: str = "accuracy"
     ) -> tuple:
@@ -59,28 +88,9 @@ class DataModeling:
             percentage=True,
         )
 
-        return best_model, best_params, best_performance
+        return best_model, best_params
 
-    def plot_evaluation_results(self, model, trn_y, prd_trn, tst_y, prd_tst, labels: ndarray, dataset) -> ndarray:
-        evaluation: dict = {}
-        for key in CLASS_EVAL_METRICS:
-            evaluation[key] = [
-                CLASS_EVAL_METRICS[key](trn_y, prd_trn),
-                CLASS_EVAL_METRICS[key](tst_y, prd_tst),
-            ]
-
-        params_st: str = "" if () == model["params"] else str(model["params"])
-        fig: Figure
-        axs: ndarray
-        fig, axs = subplots(1, 2, figsize=(2 * HEIGHT, HEIGHT))
-        fig.suptitle(f'Best {model["metric"]} for {model["name"]} {params_st} - {dataset}')
-        plot_multibar_chart(["Train", "Test"], evaluation, ax=axs[0], percentage=True)
-
-        cnf_mtx_tst: ndarray = confusion_matrix(tst_y, prd_tst, labels=labels)
-        plot_confusion_matrix(cnf_mtx_tst, labels, ax=axs[1])
-        return axs
-
-    def evaluate_naive_bayes(self):
+    def naive_bayes(self):
         """
         Evaluate Naive Bayes models for both accuracy and recall and generate plots for each metric.
         Returns the results for both evaluations.
@@ -89,54 +99,38 @@ class DataModeling:
         tstX: ndarray = self.X_test.values
         trnY: array = self.y_train.values
         tstY: array = self.y_test.values
+        labels: list = list(self.y_train.unique())
+        labels.sort()
 
         print(f"Train#={len(trnX)} Test#={len(tstX)}")
 
         # Accuracy
         figure(figsize=(7, 5))
-        best_model_acc, params_acc, best_acc = self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="accuracy")
+        best_model, params= self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="accuracy")
         savefig(f"graphs/data_modeling/nb/{self.data_loader.file_tag}_nb_accuracy_study.png")
         show()
 
         # Recall
         figure(figsize=(7, 5))
-        best_model_recall, params_recall, best_recall = self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="recall")
+        best_model, params= self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="recall")
         savefig(f"graphs/data_modeling/nb/{self.data_loader.file_tag}_nb_recall_study.png")
         show()
 
         # Print model performance
         print(f"\nModel Performance:")
-        print(f"Accuracy - Best Model: {params_acc['name']} | Accuracy: {best_acc}")
-        print(f"Recall - Best Model: {params_recall['name']} | Recall: {best_recall}")
+        print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
 
-        # Return models and their parameters
-        return {
-            params_acc["name"]: {"metric": "accuracy", "model": best_model_acc, "params": params_acc,
-                                 "score": best_acc},
-            params_recall["name"]: {"metric": "recall", "model": best_model_recall, "params": params_recall,
-                                    "score": best_recall},
-        }, trnX, trnY, tstX, tstY
-
-    def analyze_naive_bayes(self, chosen_model, chosen_params, trnX, trnY, tstX, tstY):
-        """
-        Perform performance analysis for the chosen Naive Bayes model.
-
-        Parameters:
-            chosen_model: The model selected for analysis.
-            chosen_params: The parameters of the selected model.
-        """
-        labels: list = list(self.y_train.unique())
-        labels.sort()
-
-        prd_trn: array = chosen_model.predict(trnX)
-        prd_tst: array = chosen_model.predict(tstX)
+        prd_trn: array = best_model.predict(trnX)
+        prd_tst: array = best_model.predict(tstX)
 
         # Plot evaluation results
         figure()
-        self.plot_evaluation_results(chosen_params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
+        evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(
-            f'graphs/data_modeling/nb/{self.data_loader.file_tag}_{chosen_params["name"]}_best_{chosen_params["metric"]}_eval.png')
+            f'graphs/data_modeling/nb/{self.data_loader.file_tag}_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
+
+        return evaluation_results
 
     def knn_study(
             self, trnX: ndarray, trnY: array, tstX: ndarray, tstY: array, dataset, k_max: int = 19, lag: int = 2, metric='accuracy'
@@ -160,6 +154,7 @@ class DataModeling:
                 if eval - best_performance > DELTA_IMPROVE:
                     best_performance: float = eval
                     best_params['params'] = (k, d)
+                    best_params[metric] = eval
                     best_model = clf
                 # print(f'KNN {d} k={k}')
             values[d] = y_tst_values
@@ -169,7 +164,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def evaluate_knn(self, k_max: int = 25, lag: int = 2) -> dict:
+    def knn(self, k_max: int = 25, lag: int = 2) -> dict:
         """
         Evaluate KNN models for both accuracy and recall and generate plots for each metric.
         Returns the results for both evaluations.
@@ -178,12 +173,14 @@ class DataModeling:
         tstX: ndarray = self.X_test.values
         trnY: array = self.y_train.values
         tstY: array = self.y_test.values
+        labels: list = list(self.y_train.unique())
+        labels.sort()
 
         print(f"Train#={len(trnX)} Test#={len(tstX)}")
 
         # Accuracy Study
         figure()
-        best_model_acc, params_acc = self.knn_study(
+        best_model, params = self.knn_study(
             trnX, trnY, tstX, tstY, self.data_loader.file_tag, k_max=k_max, lag=lag, metric="accuracy"
         )
         savefig(f"graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_accuracy_study.png")
@@ -191,7 +188,7 @@ class DataModeling:
 
         # Recall Study
         figure()
-        best_model_recall, params_recall = self.knn_study(
+        best_model, params = self.knn_study(
             trnX, trnY, tstX, tstY, self.data_loader.file_tag, k_max=k_max, lag=lag, metric="recall"
         )
         savefig(f"graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_recall_study.png")
@@ -199,39 +196,20 @@ class DataModeling:
 
         # Print model performance
         print("\nModel Performance:")
-        print(f"Accuracy - Best Params: {params_acc}")
-        print(f"Recall - Best Params: {params_recall}")
+        print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
 
-        # Return models and their parameters
-        return {
-            params_acc['params'][1]: {"metric": "accuracy", "model": best_model_acc, "params": params_acc},
-            params_recall['params'][1]: {"metric": "recall", "model": best_model_recall, "params": params_recall},
-        }, trnX, trnY, tstX, tstY
+        prd_trn: array = best_model.predict(trnX)
+        prd_tst: array = best_model.predict(tstX)
 
-    def analyze_knn(self, chosen_model: KNeighborsClassifier, chosen_params: dict, metric, trnX, trnY, tstX, tstY):
-        """
-        Perform performance analysis and overfitting study for the chosen KNN model.
-
-        Parameters:
-            chosen_model: The model selected for analysis.
-            chosen_params: The parameters of the selected model.
-            metric: Evaluation metric used for overfitting study (default: recall).
-        """
-        labels: list = list(self.y_train.unique())
-        labels.sort()
-
-        # Best Model Performance Analysis
-        prd_trn: array = chosen_model.predict(trnX)
-        prd_tst: array = chosen_model.predict(tstX)
         figure()
-        self.plot_evaluation_results(chosen_params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
+        evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(
-            f'graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_{chosen_params["name"]}_best_{metric}_eval.png'
+            f'graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_{params["name"]}_best_{params["metric"]}_eval.png'
         )
         show()
 
         # Overfitting Study
-        distance = chosen_params["params"][1]
+        distance = params["params"][1]
         K_MAX = 25
         kvalues = [i for i in range(1, K_MAX, 2)]
         y_tst_values = []
@@ -242,8 +220,8 @@ class DataModeling:
             clf.fit(trnX, trnY)
             prd_tst_Y: array = clf.predict(tstX)
             prd_trn_Y: array = clf.predict(trnX)
-            y_tst_values.append(CLASS_EVAL_METRICS[metric](tstY, prd_tst_Y))
-            y_trn_values.append(CLASS_EVAL_METRICS[metric](trnY, prd_trn_Y))
+            y_tst_values.append(CLASS_EVAL_METRICS[params["metric"]](tstY, prd_tst_Y))
+            y_trn_values.append(CLASS_EVAL_METRICS[params["metric"]](trnY, prd_trn_Y))
 
         figure()
         plot_multiline_chart(
@@ -251,11 +229,13 @@ class DataModeling:
             {"Train": y_trn_values, "Test": y_tst_values},
             title=f"KNN Overfitting Study for {distance} - {self.data_loader.file_tag}",
             xlabel="K",
-            ylabel=metric,
+            ylabel=params["metric"],
             percentage=True,
         )
         savefig(f"graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_overfitting.png")
         show()
+
+        return evaluation_results
 
     def trees_study(
             self, trnX: ndarray, trnY: array, tstX: ndarray, tstY: array, dataset, d_max: int = 10, lag: int = 2, metric='accuracy'
@@ -279,6 +259,7 @@ class DataModeling:
                 if eval - best_performance > DELTA_IMPROVE:
                     best_performance = eval
                     best_params['params'] = (c, d)
+                    best_params[metric] = eval
                     best_model = clf
                 # print(f'DT {c} and d={d}')
             values[c] = y_tst_values
@@ -287,63 +268,54 @@ class DataModeling:
 
         return best_model, best_params
 
-    def evaluate_decision_tree(self):
+    def decision_tree(self):
 
         trnX: ndarray = self.X_train.values
         tstX: ndarray = self.X_test.values
         trnY: array = self.y_train.values
         tstY: array = self.y_test.values
+        labels: list = list(self.y_train.unique())
+        labels.sort()
+        vars = self.X_train.columns.to_list()
 
         print(f'Train#={len(trnX)} Test#={len(tstX)}')
 
         # Accuracy Study
         figure()
-        best_model_acc, params_acc = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
+        best_model, params = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
                                               metric='accuracy')
         savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_accuracy_study.png')
         show()
 
         # Recall Study
         figure()
-        best_model_recall, params_recall = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
+        best_model, params = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
                                               metric='recall')
         savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_recall_study.png')
         show()
 
         # Print model performance
         print("\nModel Performance:")
-        print(f"Accuracy - Best Params: {params_acc}")
-        print(f"Recall - Best Params: {params_recall}")
-
-        # Return models and their parameters
-        return {
-            params_acc['params'][0]: {"metric": "accuracy", "model": best_model_acc, "params": params_acc},
-            params_recall['params'][0]: {"metric": "recall", "model": best_model_recall, "params": params_recall},
-        }, trnX, trnY, tstX, tstY
-
-    def analyze_decision_tree(self, chosen_model, chosen_params, metric, trnX, trnY, tstX, tstY):
-
-        labels: list = list(self.y_train.unique())
-        labels.sort()
-        vars = self.X_train.columns.to_list()
+        print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
 
         # Best Model Performance Analysis
-        prd_trn: array = chosen_model.predict(trnX)
-        prd_tst: array = chosen_model.predict(tstX)
+        prd_trn: array = best_model.predict(trnX)
+        prd_tst: array = best_model.predict(tstX)
+
         figure()
-        self.plot_evaluation_results(chosen_params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
+        evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(
-            f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{chosen_params["name"]}_best_{chosen_params["metric"]}_eval.png')
+            f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
         # Variables Importance
-        tree_filename: str = f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{metric}_best_tree"
+        tree_filename: str = f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_best_tree"
         max_depth2show = 3
         st_labels: list[str] = [str(value) for value in labels]
 
         figure(figsize=(14, 6))
         plot_tree(
-            chosen_model,
+            best_model,
             max_depth=max_depth2show,
             feature_names=vars,
             class_names=st_labels,
@@ -354,7 +326,7 @@ class DataModeling:
         )
         savefig(tree_filename + ".png")
 
-        importances = chosen_model.feature_importances_
+        importances = best_model.feature_importances_
         indices: list[int] = argsort(importances)[::-1]
         elems: list[str] = []
         imp_values: list[float] = []
@@ -372,10 +344,10 @@ class DataModeling:
             ylabel="variables",
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{metric}_vars_ranking.png")
+        savefig(f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_vars_ranking.png")
 
         # Overfitting Study
-        crit: Literal["entropy", "gini"] = chosen_params["params"][0]
+        crit: Literal["entropy", "gini"] = params["params"][0]
         d_max = 25
         depths: list[int] = [i for i in range(2, d_max + 1, 1)]
         y_tst_values: list[float] = []
@@ -395,11 +367,13 @@ class DataModeling:
             {"Train": y_trn_values, "Test": y_tst_values},
             title=f"DT overfitting study for {crit} - {self.data_loader.file_tag}",
             xlabel="max_depth",
-            ylabel=str(metric),
+            ylabel=str(params["metric"]),
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{metric}_overfitting.png")
+        savefig(f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_overfitting.png")
         show()
+
+        return evaluation_results
 
     def mlp_study(
             self, trnX: ndarray, trnY: array, tstX: ndarray, tstY: array,
@@ -448,6 +422,7 @@ class DataModeling:
                     if eval - best_performance > DELTA_IMPROVE:
                         best_performance = eval
                         best_params["params"] = (type, lr, nr_iterations[j])
+                        best_params[metric] = eval
                         best_model = clf
                     # print(f'MLP lr_type={type} lr={lr} n={nr_iterations[j]}')
                 values[lr] = y_tst_values
@@ -489,11 +464,13 @@ class DataModeling:
         savefig(f"graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_study.png")
         show()
 
+        print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
+
         # Best Model Performance Analysis
         prd_trn: array = best_model.predict(trnX)
         prd_tst: array = best_model.predict(tstX)
         figure()
-        self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
+        evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(f'graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
@@ -548,14 +525,11 @@ class DataModeling:
         )
         savefig(f"graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_loss_curve.png")
 
+        return evaluation_results
+
     def random_forests_study(self,
-        trnX: ndarray,
-        trnY: array,
-        tstX: ndarray,
-        tstY: array,
-        nr_max_trees: int = 2500,
-        lag: int = 500,
-        metric: str = "accuracy",
+        trnX: ndarray, trnY: array, tstX: ndarray, tstY: array,
+        nr_max_trees: int = 2500, lag: int = 500, metric: str = "accuracy",
     ) -> tuple[RandomForestClassifier | None, dict]:
         n_estimators: list[int] = [100] + [i for i in range(500, nr_max_trees + 1, lag)]
         max_depths: list[int] = [2, 5, 7]
@@ -585,6 +559,7 @@ class DataModeling:
                     if eval - best_performance > DELTA_IMPROVE:
                         best_performance = eval
                         best_params["params"] = (d, f, n)
+                        best_params[metric] = eval
                         best_model = clf
                     # print(f'RF d={d} f={f} n={n}')
                 values[f] = y_tst_values
@@ -600,7 +575,7 @@ class DataModeling:
         print(f'RF best for {best_params["params"][2]} trees (d={best_params["params"][0]} and f={best_params["params"][1]})')
         return best_model, best_params
 
-    def random_forests(self):
+    def random_forest(self):
         eval_metric = "accuracy"
 
         trnX: ndarray = self.X_train.values
@@ -628,11 +603,13 @@ class DataModeling:
         savefig(f"graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_study.png")
         show()
 
+        print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
+
         # Best Model Performance Analysis
         prd_trn: array = best_model.predict(trnX)
         prd_tst: array = best_model.predict(tstX)
         figure()
-        self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
+        evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(f'graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
@@ -689,14 +666,11 @@ class DataModeling:
         )
         savefig(f"graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_overfitting.png")
 
+        return evaluation_results
+
     def gradient_boosting_study(self,
-        trnX: ndarray,
-        trnY: array,
-        tstX: ndarray,
-        tstY: array,
-        nr_max_trees: int = 2500,
-        lag: int = 500,
-        metric: str = "accuracy",
+        trnX: ndarray, trnY: array, tstX: ndarray, tstY: array,
+        nr_max_trees: int = 2500, lag: int = 500, metric: str = "accuracy",
     ) -> tuple[GradientBoostingClassifier | None, dict]:
         n_estimators: list[int] = [100] + [i for i in range(500, nr_max_trees + 1, lag)]
         max_depths: list[int] = [2, 5, 7]
@@ -725,6 +699,7 @@ class DataModeling:
                     if eval - best_performance > DELTA_IMPROVE:
                         best_performance = eval
                         best_params["params"] = (d, lr, n)
+                        best_params[metric] = eval
                         best_model = clf
                     # print(f'GB d={d} lr={lr} n={n}')
                 values[lr] = y_tst_values
@@ -769,11 +744,13 @@ class DataModeling:
         savefig(f"graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_study.png")
         show()
 
+        print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
+
         # Best Model Performance Analysis
         prd_trn: array = best_model.predict(trnX)
         prd_tst: array = best_model.predict(tstX)
         figure()
-        self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
+        evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(f'graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
@@ -832,3 +809,5 @@ class DataModeling:
             percentage=True,
         )
         savefig(f"graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_overfitting.png")
+
+        return evaluation_results
