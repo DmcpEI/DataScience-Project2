@@ -270,7 +270,7 @@ class DataProcessing:
         symbolic_columns = variable_types["symbolic"]
 
         # Split data into training and test sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
         # Dictionary to store results
         techniques = {}
