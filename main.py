@@ -22,9 +22,9 @@ print(data_loader1.data.head())
 print(data_loader2.data.head())
 
 # Sample the data of NY Arrests
-print(f"\nSampling 100000 records from the NY Arrests dataset...")
+# print(f"\nSampling 100000 records from the NY Arrests dataset...")
 # data_loader1.data = data_loader1.data.sample(n=100000)
-print(f"Dataset successfully sampled to 100000 records.")
+# print(f"Dataset successfully sampled to 100000 records.")
 
 # %% 1- Data Profiling
 
@@ -97,110 +97,142 @@ data_processing2 = DataProcessing(data_loader2)
 
 # Handle Missing Values
 # techniques1 = data_processing1.handle_missing_values()
-# print(f"\nForm the plots we conclude that the best approach for the Missing Values of the {data_loader1.file_tag} dataset is Missing Value Removal\n")
+# print(f"\nFrom the plots we conclude that the best approach for the Missing Values of the {data_loader1.file_tag} dataset is Missing Value Removal\n")
 # data_processing1.apply_best_missing_value_approach('Remove MV', techniques1)
 
-# # techniques2 = data_processing2.handle_missing_values()
+# techniques2 = data_processing2.handle_missing_values()
 # print(f"\nThe {data_loader2.file_tag} dataset doesnt have missing values\n")
 
 # Save the data
 # data_loader1.data.to_csv("data/class_ny_arrests_MV.csv", index=False)
 # data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
-data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
-data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
+
+# Load the data
+# data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
+# data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
 
 # Data Splitting
 # X1 = data_loader1.data.drop(columns=[data_loader1.target])
 # y1 = data_loader1.data[data_loader1.target]
 # X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y1, test_size=0.3)
 # data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test = X1_train, y1_train, X1_test, y1_test
-#
+
 # X2 = data_loader2.data.drop(columns=[data_loader2.target])
 # y2 = data_loader2.data[data_loader2.target]
 # X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.3)
 # data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test = X2_train, y2_train, X2_test, y2_test
 
+# Save the initial split data
+# X1_train.to_csv("data/class_ny_arrests_Xtrain_initial.csv", index=False)
+# X1_test.to_csv("data/class_ny_arrests_Xtest_initial.csv", index=False)
+# y1_train.to_csv("data/class_ny_arrests_ytrain_initial.csv", index=False)
+# y1_test.to_csv("data/class_ny_arrests_ytest_initial.csv", index=False)
+
+# X2_train.to_csv("data/class_financial_distress_Xtrain_initial.csv", index=False)
+# X2_test.to_csv("data/class_financial_distress_Xtest_initial.csv", index=False)
+# y2_train.to_csv("data/class_financial_distress_ytrain_initial.csv", index=False)
+# y2_test.to_csv("data/class_financial_distress_ytest_initial.csv", index=False)
+
+# Load the initial split data
+X1_train = pd.read_csv("data/class_ny_arrests_Xtrain_initial.csv")
+X1_test = pd.read_csv("data/class_ny_arrests_Xtest_initial.csv")
+y1_train = pd.read_csv("data/class_ny_arrests_ytrain_initial.csv")
+y1_test = pd.read_csv("data/class_ny_arrests_ytest_initial.csv")
+data_processing1.X_train = X1_train
+data_processing1.X_test = X1_test
+data_processing1.y_train = y1_train
+data_processing1.y_test = y1_test
+
+X2_train = pd.read_csv("data/class_financial_distress_Xtrain_initial.csv")
+X2_test = pd.read_csv("data/class_financial_distress_Xtest_initial.csv")
+y2_train = pd.read_csv("data/class_financial_distress_ytrain_initial.csv")
+y2_test = pd.read_csv("data/class_financial_distress_ytest_initial.csv")
+data_processing2.X_train = X2_train
+data_processing2.X_test = X2_test
+data_processing2.y_train = y2_train
+data_processing2.y_test = y2_test
+
 # Handle Outliers
-# techniques1, df_train_dropped1, df_train_replaced1, df_train_truncated1 = data_processing1.handle_outliers()
-# print(f"\nForm the plots we conclude that the best approach for the Outliers of the {data_loader1.file_tag} dataset is to truncate them\n")
-# data_processing1.apply_best_outliers_approach('Truncate', techniques1,
-#                                               df_train_truncated1.drop(columns=[data_loader1.target]),
-#                                               df_train_truncated1[data_loader1.target])
-#
-# techniques2, df_train_dropped2, df_train_replaced2, df_train_truncated2 = data_processing2.handle_outliers()
-# print(f"\nForm the plots we conclude that the best approach for the Outliers of the {data_loader2.file_tag} dataset is to truncate them\n")
-# data_processing2.apply_best_outliers_approach('Truncate', techniques2,
-#                                               df_train_truncated2.drop(columns=[data_loader2.target]),
-#                                               df_train_truncated2[data_loader2.target])
+techniques1, df_train_dropped1, df_train_replaced1, df_train_truncated1 = data_processing1.handle_outliers()
+print(f"\nFrom the plots we conclude that the best approach for the Outliers of the {data_loader1.file_tag} dataset is to truncate them\n")
+data_processing1.apply_best_outliers_approach('Truncate', techniques1,
+                                              df_train_truncated1.drop(columns=[data_loader1.target]),
+                                              df_train_truncated1[data_loader1.target])
+
+techniques2, df_train_dropped2, df_train_replaced2, df_train_truncated2 = data_processing2.handle_outliers()
+print(f"\nFrom the plots we conclude that the best approach for the Outliers of the {data_loader2.file_tag} dataset is to truncate them\n")
+data_processing2.apply_best_outliers_approach('Truncate', techniques2,
+                                              df_train_truncated2.drop(columns=[data_loader2.target]),
+                                              df_train_truncated2[data_loader2.target])
 
 # Save the data
-# X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
-#                                         data_processing1.y_train, data_processing1.y_test)
-#
-# X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
-#                                         data_processing2.y_train, data_processing2.y_test)
+X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
+                                        data_processing1.y_train, data_processing1.y_test)
 
-# X1_train.to_csv("data/class_ny_arrests_Xtrain_outliers.csv", index=False)
-# X1_test.to_csv("data/class_ny_arrests_Xtest_outliers.csv", index=False)
-# y1_train.to_csv("data/class_ny_arrests_ytrain_outliers.csv", index=False)
-# y1_test.to_csv("data/class_ny_arrests_ytest_outliers.csv", index=False)
-#
-# X2_train.to_csv("data/class_financial_distress_Xtrain_outliers.csv", index=False)
-# X2_test.to_csv("data/class_financial_distress_Xtest_outliers.csv", index=False)
-# y2_train.to_csv("data/class_financial_distress_ytrain_outliers.csv", index=False)
-# y2_test.to_csv("data/class_financial_distress_ytest_outliers.csv", index=False)
+X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
+                                        data_processing2.y_train, data_processing2.y_test)
+
+X1_train.to_csv("data/class_ny_arrests_Xtrain_outliers.csv", index=False)
+X1_test.to_csv("data/class_ny_arrests_Xtest_outliers.csv", index=False)
+y1_train.to_csv("data/class_ny_arrests_ytrain_outliers.csv", index=False)
+y1_test.to_csv("data/class_ny_arrests_ytest_outliers.csv", index=False)
+
+X2_train.to_csv("data/class_financial_distress_Xtrain_outliers.csv", index=False)
+X2_test.to_csv("data/class_financial_distress_Xtest_outliers.csv", index=False)
+y2_train.to_csv("data/class_financial_distress_ytrain_outliers.csv", index=False)
+y2_test.to_csv("data/class_financial_distress_ytest_outliers.csv", index=False)
 
 # Handle Scaling
-# techniques1, df_zscore_train1, df_zscore_test1, df_minmax_train1, df_minmax_test1 = data_processing1.handle_scaling()
-# print(f"\nForm the plots we conclude that the best approach for the Scaling of the {data_loader1.file_tag} dataset is Standard\n")
-# data_processing1.apply_best_scaling_approach('Standard', techniques1,
-#                                              df_zscore_train1.drop(columns=[data_loader1.target]), df_zscore_train1[data_loader1.target],
-#                                              df_zscore_test1.drop(columns=[data_loader1.target]), df_zscore_test1[data_loader1.target])
-#
-# techniques2, df_zscore_train2, df_zscore_test2, df_minmax_train2, df_minmax_test2 = data_processing2.handle_scaling()
-# print(f"\nForm the plots we conclude that the best approach for the Scaling of the {data_loader2.file_tag} dataset is Standard\n")
-# data_processing2.apply_best_scaling_approach('Standard', techniques2,
-#                                              df_zscore_train2.drop(columns=[data_loader2.target]), df_zscore_train2[data_loader2.target],
-#                                              df_zscore_test2.drop(columns=[data_loader2.target]), df_zscore_test2[data_loader2.target])
+techniques1, df_zscore_train1, df_zscore_test1, df_minmax_train1, df_minmax_test1 = data_processing1.handle_scaling()
+print(f"\nFrom the plots we conclude that the best approach for the Scaling of the {data_loader1.file_tag} dataset is Standard\n")
+data_processing1.apply_best_scaling_approach('Standard', techniques1,
+                                             df_zscore_train1.drop(columns=[data_loader1.target]), df_zscore_train1[data_loader1.target],
+                                             df_zscore_test1.drop(columns=[data_loader1.target]), df_zscore_test1[data_loader1.target])
+
+techniques2, df_zscore_train2, df_zscore_test2, df_minmax_train2, df_minmax_test2 = data_processing2.handle_scaling()
+print(f"\nFrom the plots we conclude that the best approach for the Scaling of the {data_loader2.file_tag} dataset is Standard\n")
+data_processing2.apply_best_scaling_approach('Standard', techniques2,
+                                             df_zscore_train2.drop(columns=[data_loader2.target]), df_zscore_train2[data_loader2.target],
+                                             df_zscore_test2.drop(columns=[data_loader2.target]), df_zscore_test2[data_loader2.target])
 
 # Save the data
-# X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
-#                                         data_processing1.y_train, data_processing1.y_test)
-#
-# X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
-#                                         data_processing2.y_train, data_processing2.y_test)
+X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
+                                        data_processing1.y_train, data_processing1.y_test)
 
-# X1_train.to_csv("data/class_ny_arrests_Xtrain_scaling.csv", index=False)
-# X1_test.to_csv("data/class_ny_arrests_Xtest_scaling.csv", index=False)
-# y1_train.to_csv("data/class_ny_arrests_ytrain_scaling.csv", index=False)
-# y1_test.to_csv("data/class_ny_arrests_ytest_scaling.csv", index=False)
-#
-# X2_train.to_csv("data/class_financial_distress_Xtrain_scaling.csv", index=False)
-# X2_test.to_csv("data/class_financial_distress_Xtest_scaling.csv", index=False)
-# y2_train.to_csv("data/class_financial_distress_ytrain_scaling.csv", index=False)
-# y2_test.to_csv("data/class_financial_distress_ytest_scaling.csv", index=False)
+X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
+                                        data_processing2.y_train, data_processing2.y_test)
+
+X1_train.to_csv("data/class_ny_arrests_Xtrain_scaling.csv", index=False)
+X1_test.to_csv("data/class_ny_arrests_Xtest_scaling.csv", index=False)
+y1_train.to_csv("data/class_ny_arrests_ytrain_scaling.csv", index=False)
+y1_test.to_csv("data/class_ny_arrests_ytest_scaling.csv", index=False)
+
+X2_train.to_csv("data/class_financial_distress_Xtrain_scaling.csv", index=False)
+X2_test.to_csv("data/class_financial_distress_Xtest_scaling.csv", index=False)
+y2_train.to_csv("data/class_financial_distress_ytrain_scaling.csv", index=False)
+y2_test.to_csv("data/class_financial_distress_ytest_scaling.csv", index=False)
 
 # Handle Balancing
-# techniques1, df_under_X1, df_under_y1, df_over_X1, df_over_y1, smote_X1, smote_y1 = data_processing1.handle_balancing()
-# print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader1.file_tag} dataset is Oversampling\n")
-# data_processing1.apply_best_balancing_approach('Oversampling', techniques1, df_over_X1, df_over_y1)
-#
-# techniques2, df_under_X2, df_under_y2, df_over_X2, df_over_y2, smote_X2, smote_y2 = data_processing2.handle_balancing()
-# print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader2.file_tag} dataset is Under Sampling\n")
-# data_processing2.apply_best_balancing_approach('SMOTE', techniques2, smote_X2, smote_y2)
+techniques1, df_under_X1, df_under_y1, df_over_X1, df_over_y1, smote_X1, smote_y1 = data_processing1.handle_balancing()
+print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader1.file_tag} dataset is Oversampling\n")
+data_processing1.apply_best_balancing_approach('Oversampling', techniques1, df_over_X1, df_over_y1)
+
+techniques2, df_under_X2, df_under_y2, df_over_X2, df_over_y2, smote_X2, smote_y2 = data_processing2.handle_balancing()
+print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader2.file_tag} dataset is SMOTE\n")
+data_processing2.apply_best_balancing_approach('SMOTE', techniques2, smote_X2, smote_y2)
 
 # Save the data
-# X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
-#                                         data_processing1.y_train, data_processing1.y_test)
-#
-# X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
-#                                         data_processing2.y_train, data_processing2.y_test)
-#
-# X1_train.to_csv("data/class_ny_arrests_Xtrain_balancing.csv", index=False)
-# y1_train.to_csv("data/class_ny_arrests_ytrain_balancing.csv", index=False)
-#
-# X2_train.to_csv("data/class_financial_distress_Xtrain_balancing.csv", index=False)
-# y2_train.to_csv("data/class_financial_distress_ytrain_balancing.csv", index=False)
+X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
+                                        data_processing1.y_train, data_processing1.y_test)
+
+X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
+                                        data_processing2.y_train, data_processing2.y_test)
+
+X1_train.to_csv("data/class_ny_arrests_Xtrain_balancing.csv", index=False)
+y1_train.to_csv("data/class_ny_arrests_ytrain_balancing.csv", index=False)
+
+X2_train.to_csv("data/class_financial_distress_Xtrain_balancing.csv", index=False)
+y2_train.to_csv("data/class_financial_distress_ytrain_balancing.csv", index=False)
 
 # Handle Feature Selection
 # data_processing1.handle_feature_selection()

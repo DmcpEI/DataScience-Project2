@@ -309,7 +309,7 @@ class DataModeling:
         show()
 
         # Variables Importance
-        tree_filename: str = f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_best_tree"
+        tree_filename: str = f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_best_tree'
         max_depth2show = 3
         st_labels: list[str] = [str(value) for value in labels]
 
@@ -344,7 +344,7 @@ class DataModeling:
             ylabel="variables",
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_vars_ranking.png")
+        savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_vars_ranking.png')
 
         # Overfitting Study
         crit: Literal["entropy", "gini"] = params["params"][0]
@@ -370,7 +370,7 @@ class DataModeling:
             ylabel=str(params["metric"]),
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_overfitting.png")
+        savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_overfitting.png')
         show()
 
         return evaluation_results
