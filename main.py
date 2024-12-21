@@ -190,8 +190,8 @@ data_processing1.apply_best_scaling_approach('Standard', techniques1,
                                              df_zscore_test1.drop(columns=[data_loader1.target]), df_zscore_test1[data_loader1.target])
 
 techniques2, df_zscore_train2, df_zscore_test2, df_minmax_train2, df_minmax_test2 = data_processing2.handle_scaling()
-print(f"\nFrom the plots we conclude that the best approach for the Scaling of the {data_loader2.file_tag} dataset is Standard\n")
-data_processing2.apply_best_scaling_approach('Standard', techniques2,
+print(f"\nFrom the plots we conclude that the best approach for the Scaling of the {data_loader2.file_tag} dataset is to keep the original (no scaling)\n")
+data_processing2.apply_best_scaling_approach('Original', techniques2,
                                              df_zscore_train2.drop(columns=[data_loader2.target]), df_zscore_train2[data_loader2.target],
                                              df_zscore_test2.drop(columns=[data_loader2.target]), df_zscore_test2[data_loader2.target])
 
@@ -214,12 +214,12 @@ y2_test.to_csv("data/class_financial_distress_ytest_scaling.csv", index=False)
 
 # Handle Balancing
 techniques1, df_under_X1, df_under_y1, df_over_X1, df_over_y1, smote_X1, smote_y1 = data_processing1.handle_balancing()
-print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader1.file_tag} dataset is Oversampling\n")
-data_processing1.apply_best_balancing_approach('Oversampling', techniques1, df_over_X1, df_over_y1)
+print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader1.file_tag} dataset is SMOTE\n")
+data_processing1.apply_best_balancing_approach('SMOTE', techniques1, smote_X1, smote_y1)
 
 techniques2, df_under_X2, df_under_y2, df_over_X2, df_over_y2, smote_X2, smote_y2 = data_processing2.handle_balancing()
-print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader2.file_tag} dataset is SMOTE\n")
-data_processing2.apply_best_balancing_approach('SMOTE', techniques2, smote_X2, smote_y2)
+print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader2.file_tag} dataset is Undersampling\n")
+data_processing2.apply_best_balancing_approach('Undersampling', techniques2, df_under_X2, df_under_y2)
 
 # Save the data
 X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
