@@ -244,12 +244,27 @@ y2_train = pd.read_csv("data/class_financial_distress_ytrain_balancing.csv")
 data_processing1.handle_feature_selection()
 data_processing2.handle_feature_selection()
 
+# Inspect columns in the processed datasets
+print("Columns in X1_train:", X1_train.columns.tolist())
+print("Columns in X1_test:", X1_test.columns.tolist())
+
+print("Columns in X2_train:", X2_train.columns.tolist())
+print("Columns in X2_test:", X2_test.columns.tolist())
+print("=====================================================================================================")
+
 # Save the data
 X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
                                         data_processing1.y_train, data_processing1.y_test)
 
 X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
                                         data_processing2.y_train, data_processing2.y_test)
+print("=====================================================================================================")
+# Inspect columns in the processed datasets
+print("Columns in X1_train:", X1_train.columns.tolist())
+print("Columns in X1_test:", X1_test.columns.tolist())
+
+print("Columns in X2_train:", X2_train.columns.tolist())
+print("Columns in X2_test:", X2_test.columns.tolist())
 
 X1_train.to_csv("data/class_ny_arrests_Xtrain_preparation.csv", index=False)
 X1_test.to_csv("data/class_ny_arrests_Xtest_preparation.csv", index=False)

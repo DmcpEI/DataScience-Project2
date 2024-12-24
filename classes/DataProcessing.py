@@ -742,35 +742,29 @@ class DataProcessing:
 
     def apply_feature_selection(self, vars2drop: list[str], file_tag: str):
         """
-        Applies the feature selection to training and testing datasets.
+        Applies feature selection by dropping specified variables from training and testing datasets.
+
         :param vars2drop: List of variables to drop.
+        :param file_tag: Tag to include in the filenames of the saved datasets.
         """
         # Ensure vars2drop is valid
         if not isinstance(vars2drop, list) or len(vars2drop) == 0:
             print("No variables to drop.")
             return
 
-        # Separate features and target
-        train = self.data_loader.data.drop(columns=[self.target])
-        test = self.data_loader.data[self.target]
+        # Ensure vars2drop columns exist in both X_train and X_test
+        vars_to_remove = [var for var in vars2drop if var in self.X_train.columns]
 
-        # Ensure vars2drop columns exist in both train and test
-        vars_to_remove = [var for var in vars2drop if var in train.columns]
-
-        # Drop selected variables
-        train_selected = train.drop(columns=vars_to_remove, inplace=False)
-        test_selected = test.drop(columns=vars_to_remove, inplace=False)
+        # Drop selected variables from X_train and X_test
+        self.X_train = self.X_train.drop(columns=vars_to_remove, inplace=False)
+        self.X_test = self.X_test.drop(columns=vars_to_remove, inplace=False)
 
         # Save processed datasets
-        train_selected.to_csv(f"data/{file_tag}_train.csv", index=False)
-        test_selected.to_csv(f"data/{file_tag}_test.csv", index=False)
-
-        # Update the data loader
-        self.data_loader.train = train_selected
-        self.data_loader.test = test_selected
+        self.X_train.to_csv(f"data/{file_tag}_train.csv", index=False)
+        self.X_test.to_csv(f"data/{file_tag}_test.csv", index=False)
 
         # Print summary
-        print(f"Feature selection applied. Train shape: {train_selected.shape}, Test shape: {test_selected.shape}")
+        print(f"Feature selection applied. Train shape: {self.X_train.shape}, Test shape: {self.X_test.shape}")
         print(f"Variables dropped: {vars_to_remove}")
 
     def select_redundant_variables(self, min_threshold) -> list:
