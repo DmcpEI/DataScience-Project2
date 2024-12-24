@@ -22,9 +22,9 @@ print(data_loader1.data.head())
 print(data_loader2.data.head())
 
 # Sample the data of NY Arrests
-# print(f"\nSampling 100000 records from the NY Arrests dataset...")
-# data_loader1.data = data_loader1.data.sample(n=100000)
-# print(f"Dataset successfully sampled to 100000 records.")
+print(f"\nSampling 100000 records from the NY Arrests dataset...")
+data_loader1.data = data_loader1.data.sample(n=100000)
+print(f"Dataset successfully sampled to 100000 records.")
 
 # %% 1- Data Profiling
 
@@ -36,7 +36,7 @@ print(data_loader2.data.head())
 data_processing1 = DataProcessing(data_loader1)
 data_processing2 = DataProcessing(data_loader2)
 
-# data_processing1.pre_encode_variables()
+data_processing1.pre_encode_variables()
 
 # Data Dimensionality
 # data_profiling1.plot_records_variables()
@@ -75,9 +75,9 @@ data_processing2 = DataProcessing(data_loader2)
 # data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
-# data_processing1.encode_variables()
+data_processing1.encode_variables()
 # Save the encoded data
-# data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
+data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=False)
 
 # Data Correlation
 # data_profiling1.plot_correlation_analysis()
@@ -86,52 +86,52 @@ data_processing2 = DataProcessing(data_loader2)
 # %% 2- Data Processing
 
 # Drop False Predictors
-# data_processing1.drop_variables()
-# data_processing2.drop_variables()
+data_processing1.drop_variables()
+data_processing2.drop_variables()
 
 # Save the data
-# data_loader1.data.to_csv("data/class_ny_arrests_drop.csv", index=False)
-# data_loader2.data.to_csv("data/class_financial_distress_drop.csv", index=False)
-# data_loader1.data = pd.read_csv("data/class_ny_arrests_drop.csv")
-# data_loader2.data = pd.read_csv("data/class_financial_distress_drop.csv")
+data_loader1.data.to_csv("data/class_ny_arrests_drop.csv", index=False)
+data_loader2.data.to_csv("data/class_financial_distress_drop.csv", index=False)
+data_loader1.data = pd.read_csv("data/class_ny_arrests_drop.csv")
+data_loader2.data = pd.read_csv("data/class_financial_distress_drop.csv")
 
 # Handle Missing Values
-# techniques1 = data_processing1.handle_missing_values()
-# print(f"\nFrom the plots we conclude that the best approach for the Missing Values of the {data_loader1.file_tag} dataset is Missing Value Removal\n")
-# data_processing1.apply_best_missing_value_approach('Remove MV', techniques1)
+techniques1 = data_processing1.handle_missing_values()
+print(f"\nFrom the plots we conclude that the best approach for the Missing Values of the {data_loader1.file_tag} dataset is Missing Value Removal\n")
+data_processing1.apply_best_missing_value_approach('Remove MV', techniques1)
 
 # techniques2 = data_processing2.handle_missing_values()
-# print(f"\nThe {data_loader2.file_tag} dataset doesnt have missing values\n")
+print(f"\nThe {data_loader2.file_tag} dataset doesnt have missing values\n")
 
 # Save the data
-# data_loader1.data.to_csv("data/class_ny_arrests_MV.csv", index=False)
-# data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
+data_loader1.data.to_csv("data/class_ny_arrests_MV.csv", index=False)
+data_loader2.data.to_csv("data/class_financial_distress_MV.csv", index=False)
 
 # Load the data
-# data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
-# data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
+data_loader1.data = pd.read_csv("data/class_ny_arrests_MV.csv")
+data_loader2.data = pd.read_csv("data/class_financial_distress_MV.csv")
 
 # Data Splitting
-# X1 = data_loader1.data.drop(columns=[data_loader1.target])
-# y1 = data_loader1.data[data_loader1.target]
-# X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y1, test_size=0.3)
-# data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test = X1_train, y1_train, X1_test, y1_test
+X1 = data_loader1.data.drop(columns=[data_loader1.target])
+y1 = data_loader1.data[data_loader1.target]
+X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y1, test_size=0.3)
+data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test = X1_train, y1_train, X1_test, y1_test
 
-# X2 = data_loader2.data.drop(columns=[data_loader2.target])
-# y2 = data_loader2.data[data_loader2.target]
-# X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.3)
-# data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test = X2_train, y2_train, X2_test, y2_test
+X2 = data_loader2.data.drop(columns=[data_loader2.target])
+y2 = data_loader2.data[data_loader2.target]
+X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.3)
+data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test = X2_train, y2_train, X2_test, y2_test
 
 # Save the initial split data
-# X1_train.to_csv("data/class_ny_arrests_Xtrain_initial.csv", index=False)
-# X1_test.to_csv("data/class_ny_arrests_Xtest_initial.csv", index=False)
-# y1_train.to_csv("data/class_ny_arrests_ytrain_initial.csv", index=False)
-# y1_test.to_csv("data/class_ny_arrests_ytest_initial.csv", index=False)
+X1_train.to_csv("data/class_ny_arrests_Xtrain_initial.csv", index=False)
+X1_test.to_csv("data/class_ny_arrests_Xtest_initial.csv", index=False)
+y1_train.to_csv("data/class_ny_arrests_ytrain_initial.csv", index=False)
+y1_test.to_csv("data/class_ny_arrests_ytest_initial.csv", index=False)
 
-# X2_train.to_csv("data/class_financial_distress_Xtrain_initial.csv", index=False)
-# X2_test.to_csv("data/class_financial_distress_Xtest_initial.csv", index=False)
-# y2_train.to_csv("data/class_financial_distress_ytrain_initial.csv", index=False)
-# y2_test.to_csv("data/class_financial_distress_ytest_initial.csv", index=False)
+X2_train.to_csv("data/class_financial_distress_Xtrain_initial.csv", index=False)
+X2_test.to_csv("data/class_financial_distress_Xtest_initial.csv", index=False)
+y2_train.to_csv("data/class_financial_distress_ytrain_initial.csv", index=False)
+y2_test.to_csv("data/class_financial_distress_ytest_initial.csv", index=False)
 
 # Load the initial split data
 X1_train = pd.read_csv("data/class_ny_arrests_Xtrain_initial.csv")
@@ -234,26 +234,32 @@ y1_train.to_csv("data/class_ny_arrests_ytrain_balancing.csv", index=False)
 X2_train.to_csv("data/class_financial_distress_Xtrain_balancing.csv", index=False)
 y2_train.to_csv("data/class_financial_distress_ytrain_balancing.csv", index=False)
 
+#read the saved dataset before feature selection
+X1_train = pd.read_csv("data/class_ny_arrests_Xtrain_balancing.csv")
+y1_train = pd.read_csv("data/class_ny_arrests_ytrain_balancing.csv")
+X2_train = pd.read_csv("data/class_financial_distress_Xtrain_balancing.csv")
+y2_train = pd.read_csv("data/class_financial_distress_ytrain_balancing.csv")
+
 # Handle Feature Selection
-# data_processing1.handle_feature_selection()
-# data_processing2.handle_feature_selection()
+data_processing1.handle_feature_selection()
+data_processing2.handle_feature_selection()
 
 # Save the data
-# X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
-#                                         data_processing1.y_train, data_processing1.y_test)
-#
-# X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
-#                                         data_processing2.y_train, data_processing2.y_test)
+X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
+                                        data_processing1.y_train, data_processing1.y_test)
 
-# X1_train.to_csv("data/class_ny_arrests_Xtrain_preparation.csv", index=False)
-# X1_test.to_csv("data/class_ny_arrests_Xtest_preparation.csv", index=False)
-# y1_train.to_csv("data/class_ny_arrests_ytrain_preparation.csv", index=False)
-# y1_test.to_csv("data/class_ny_arrests_ytest_preparation.csv", index=False)
-#
-# X2_train.to_csv("data/class_financial_distress_Xtrain_preparation.csv", index=False)
-# X2_test.to_csv("data/class_financial_distress_Xtest_preparation.csv", index=False)
-# y2_train.to_csv("data/class_financial_distress_ytrain_preparation.csv", index=False)
-# y2_test.to_csv("data/class_financial_distress_ytest_preparation.csv", index=False)
+X2_train, X2_test, y2_train, y2_test = (data_processing2.X_train, data_processing2.X_test,
+                                        data_processing2.y_train, data_processing2.y_test)
+
+X1_train.to_csv("data/class_ny_arrests_Xtrain_preparation.csv", index=False)
+X1_test.to_csv("data/class_ny_arrests_Xtest_preparation.csv", index=False)
+y1_train.to_csv("data/class_ny_arrests_ytrain_preparation.csv", index=False)
+y1_test.to_csv("data/class_ny_arrests_ytest_preparation.csv", index=False)
+
+X2_train.to_csv("data/class_financial_distress_Xtrain_preparation.csv", index=False)
+X2_test.to_csv("data/class_financial_distress_Xtest_preparation.csv", index=False)
+y2_train.to_csv("data/class_financial_distress_ytrain_preparation.csv", index=False)
+y2_test.to_csv("data/class_financial_distress_ytest_preparation.csv", index=False)
 
 X1_train = pd.read_csv("data/class_ny_arrests_Xtrain_preparation.csv")
 X1_test = pd.read_csv("data/class_ny_arrests_Xtest_preparation.csv")
@@ -278,8 +284,8 @@ results_summary = {
 }
 
 # Naive Bayes
-# evaluation_results_NB_dataset1 = data_modeling1.naive_bayes()
-# results_summary["NY Arrests"]["Naive Bayes"] = evaluation_results_NB_dataset1
+evaluation_results_NB_dataset1 = data_modeling1.naive_bayes()
+results_summary["NY Arrests"]["Naive Bayes"] = evaluation_results_NB_dataset1
 evaluation_results_NB_dataset2 = data_modeling2.naive_bayes()
 results_summary["Financial Distress"]["Naive Bayes"] = evaluation_results_NB_dataset2
 

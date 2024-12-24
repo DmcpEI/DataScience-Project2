@@ -643,17 +643,21 @@ class DataProcessing:
 
         print(f"\n\nHandling feature selection for the {self.data_loader.file_tag} dataset...\n")
 
-        vars_to_drop = self.select_low_variance_variables(max_threshold=3)
-        print(f"Variables to drop: {vars_to_drop}")
+        # vars_to_drop = self.select_low_variance_variables(max_threshold=3)
+        # print(f"Variables to drop: {vars_to_drop}")
         self.study_variance(self.X_train, self.X_test, self.y_train, self.y_test,
-                            max_threshold=1, lag=0.05, metric="recall", file_tag=self.data_loader.file_tag)
-        # self.apply_feature_selection(vars_to_drop, file_tag="ny_arrests_feature_selection")
+                            max_threshold=1, lag=0.2, metric="f1", file_tag=self.data_loader.file_tag)
 
-        vars_to_drop_2 = self.select_redundant_variables(min_threshold=0.25)
+
+        vars_to_drop_2 = self.select_redundant_variables(min_threshold=0.9)
         print(f"Variables to drop: {vars_to_drop_2}")
         self.study_redundancy_for_feature_selection(self.X_train, self.X_test, self.y_train, self.y_test,
-                                                    min_threshold=0.3, lag=0.1, metric="recall",
+                                                    min_threshold=0.3, lag=0.3, metric="f1",
                                                     file_tag=self.data_loader.file_tag)
+
+
+
+        self.apply_feature_selection(vars_to_drop_2, file_tag="ny_arrests_feature_selection")
 
     def select_low_variance_variables(self, max_threshold: float) -> list[str]:
         """
@@ -741,21 +745,33 @@ class DataProcessing:
         Applies the feature selection to training and testing datasets.
         :param vars2drop: List of variables to drop.
         """
+        # Ensure vars2drop is valid
+        if not isinstance(vars2drop, list) or len(vars2drop) == 0:
+            print("No variables to drop.")
+            return
+
+        # Separate features and target
         train = self.data_loader.data.drop(columns=[self.target])
         test = self.data_loader.data[self.target]
 
-        train_copy: DataFrame = train.drop(vars2drop, axis=1, inplace=False)
-        test_copy: DataFrame = test.drop(vars2drop, axis=1, inplace=False)
+        # Ensure vars2drop columns exist in both train and test
+        vars_to_remove = [var for var in vars2drop if var in train.columns]
 
-        # Save processed files
-        train_copy.to_csv(f"data/{file_tag}_train_lowvar.csv", index=True)
-        test_copy.to_csv(f"data/{file_tag}_test_lowvar.csv", index=True)
+        # Drop selected variables
+        train_selected = train.drop(columns=vars_to_remove, inplace=False)
+        test_selected = test.drop(columns=vars_to_remove, inplace=False)
+
+        # Save processed datasets
+        train_selected.to_csv(f"data/{file_tag}_train.csv", index=False)
+        test_selected.to_csv(f"data/{file_tag}_test.csv", index=False)
 
         # Update the data loader
-        self.data_loader.train = train_copy
-        self.data_loader.test = test_copy
+        self.data_loader.train = train_selected
+        self.data_loader.test = test_selected
 
-        print(f"Feature selection applied. Train shape: {train_copy.shape}, Test shape: {test_copy.shape}")
+        # Print summary
+        print(f"Feature selection applied. Train shape: {train_selected.shape}, Test shape: {test_selected.shape}")
+        print(f"Variables dropped: {vars_to_remove}")
 
     def select_redundant_variables(self, min_threshold) -> list:
         df: DataFrame = self.data_loader.data.drop(self.target, axis=1, inplace=False)
