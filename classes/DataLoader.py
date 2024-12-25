@@ -1,66 +1,66 @@
 import pandas as pd
+from pandas import DataFrame
+
 
 class DataLoader:
     """
-    Generic Class responsible for loading the dataset
+    Generic Class responsible for loading the dataset.
 
     Parameters:
         filename (str): The filename of the dataset to load.
         target (str): The target of the dataset to load.
+        read_options (dict): Additional options for reading the CSV file.
 
-    Attributes (after loading the data):
-        data (DataFrame): The main dataset containing both features and target variable.
-        labels (DataFrame): The target variable.
-        numerical_features (List): List of numerical features in the dataset.
-        categorical_features (List): List of categorical features in the dataset.
-
-
-    Methods:
-        _load_data(): Loads the dataset,and assigns the data and labels to the appropriate attributes.
+    Attributes:
+        data (DataFrame): The main dataset containing both features and the target variable.
+        labels (Series): The target variable.
     """
 
-    def __init__(self, filename, target):
+    def __init__(self, filename, target, read_options=None):
         """
         Initializes the DataLoader with the filename of the dataset.
 
         Parameters:
             filename (str): The filename of the dataset to load.
             target (str): The target of the dataset to load.
+            read_options (dict): Additional options for reading the CSV file.
         """
         self.filename = filename
         self.file_tag = filename.split("/")[-1].split(".")[0]
+        self.target = target
 
         self.data = None
-        self.target = target
         self.labels = None
-        self.numerical_features = []
-        self.categorical_features = []
 
-        # Load data
-        self._load_data(target)
+        # Store read options for reading CSV
+        self.read_options = read_options if read_options else {}
 
-    def _load_data(self, target):
+        # Load the data
+        self._load_data()
+
+    def _load_data(self):
         """
-        Loads the dataset from the specified filename,
-        and assigns the data and labels to the appropriate attributes.
-
-        Parameters:
-            target (str): The target of the dataset to load.
+        Loads the dataset using the specified filename and options.
         """
         try:
-            # Load the dataset
-            self.data = pd.read_csv(self.filename)
+            # Load the dataset with the provided options
+            self.data: DataFrame = pd.read_csv(self.filename, **self.read_options)
 
             # Validate if the target column exists in the dataset
-            if target not in self.data.columns:
-                raise ValueError(f"Target column '{target}' not found in the dataset.")
+            if self.target not in self.data.columns:
+                raise ValueError(f"Target column '{self.target}' not found in the dataset.")
 
-            self.labels = self.data[target]
-
+            # Extract labels
+            self.labels = self.data[self.target]
             print("Data loaded successfully.")
 
         except FileNotFoundError:
             print("File not found. Please check the file path.")
+        except ValueError as ve:
+            print(f"Error while loading data: {ve}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
 
 class DataManipulator(DataLoader):
     """
@@ -69,36 +69,24 @@ class DataManipulator(DataLoader):
     Parameters:
         filename (str): The path to the data file.
         target (str): The target variable in the data.
-
-    Attributes:
-        data (DataFrame): The loaded data.
+        read_options (dict): Additional options for reading the CSV file.
 
     Methods:
         _describe_variables: Prints information about the data, including data info, unique values, and statistical distribution.
-
-    Raises:
-        FileNotFoundError: If the specified file is not found.
-
     """
 
-    def __init__(self, filename, target):
+    def __init__(self, filename, target, read_options=None):
         """
         Initialize the class with a filename and target variable.
 
         Parameters:
             filename (str): The path to the file.
             target (str): The name of the target variable.
-
-        Raises:
-            FileNotFoundError: If the file is not found.
-
+            read_options (dict): Additional options for reading the CSV file.
         """
-        try:
-            super().__init__(filename, target)
-            print("\nData Description:")
-            self._describe_variables()
-        except FileNotFoundError:
-            print("File not found. Please check the file path.")
+        super().__init__(filename, target, read_options)
+        print("\nData Description:")
+        self._describe_variables()
 
     def _describe_variables(self):
         """
@@ -113,19 +101,17 @@ class DataManipulator(DataLoader):
         print("\nStatistical distribution of each variable:")
         print(self.data.describe())
 
-    def update_data(self, filename):
+    def update_data(self, filename, read_options=None):
         """
         Updates the data attribute with the data from the specified file.
 
         Parameters:
             filename (str): The path to the file.
-
-        Raises:
-            FileNotFoundError: If the file is not found.
-
+            read_options (dict): Additional options for reading the CSV file.
         """
         try:
-            self.data = pd.read_csv(filename)
+            self.read_options = read_options if read_options else self.read_options
+            self.data = pd.read_csv(filename, **self.read_options)
             print("Data updated successfully.")
         except FileNotFoundError:
             print("File not found. Please check the file path.")

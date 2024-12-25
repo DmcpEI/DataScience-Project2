@@ -1,6 +1,6 @@
 import math
 import pandas as pd
-from pandas import Series, DataFrame
+from pandas import Series, DataFrame, Index, Period
 import numpy as np
 from numpy import ndarray
 from matplotlib import pyplot as plt
@@ -10,7 +10,8 @@ from matplotlib.axes import Axes
 from seaborn import heatmap
 from scipy.stats import norm, expon, lognorm
 from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
-    plot_multi_scatters_chart, set_chart_labels, define_grid
+    plot_multi_scatters_chart, set_chart_labels, define_grid, plot_line_chart, ts_aggregation_by
+
 
 class DataProfiling:
     """
@@ -55,7 +56,7 @@ class DataProfiling:
         plot_bar_chart(
             list(values.keys()), list(values.values()), title="Nº of records vs Nº variables"
         )
-        savefig(f"graphs/data_profiling/data_dimensionality/{self.data_loader.file_tag}_records_variables.png")
+        savefig(f"graphs/classification/data_profiling/data_dimensionality/{self.data_loader.file_tag}_records_variables.png")
         show()
 
     def plot_variable_types(self):
@@ -70,7 +71,7 @@ class DataProfiling:
         plot_bar_chart(
             list(counts.keys()), list(counts.values()), title="Nº of variables per type"
         )
-        savefig(f"graphs/data_profiling/data_dimensionality/{self.data_loader.file_tag}_variable_types.png")
+        savefig(f"graphs/classification/data_profiling/data_dimensionality/{self.data_loader.file_tag}_variable_types.png")
         show()
 
     def plot_missing_values(self):
@@ -89,7 +90,7 @@ class DataProfiling:
             xlabel="variables",
             ylabel="nr missing values",
         )
-        savefig(f"graphs/data_profiling/data_dimensionality/{self.data_loader.file_tag}_mv.png")
+        savefig(f"graphs/classification/data_profiling/data_dimensionality/{self.data_loader.file_tag}_mv.png")
         show()
 
     def plot_global_boxplots(self):
@@ -100,7 +101,7 @@ class DataProfiling:
         if [] != numeric:
             figure(figsize=(8, 7))
             self.data[numeric].boxplot(rot=45)
-            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_global_boxplot.png")
+            savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_global_boxplot.png")
             show()
         else:
             print("There are no numeric variables.")
@@ -133,7 +134,7 @@ class DataProfiling:
                 ax.axis('off')
 
             # Save and display the plot
-            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_single_boxplots.png")
+            savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_single_boxplots.png")
             show()
         else:
             print("There are no numeric variables.")
@@ -181,7 +182,7 @@ class DataProfiling:
                 # Update grid indices
                 i, j = (i + 1, 0) if (n + 1) % grid_size == 0 else (i, j + 1)
 
-            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_single_histograms_numeric.png")
+            savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_single_histograms_numeric.png")
             plt.show()
         else:
             print("There are no numeric variables.")
@@ -205,7 +206,7 @@ class DataProfiling:
                     percentage=False,
                 )
                 i, j = (i + 1, 0) if (n + 1) % cols == 0 else (i, j + 1)
-            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_single_histograms_symbolic.png")
+            savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_single_histograms_symbolic.png")
             show()
         else:
             print("There are no symbolic variables.")
@@ -274,7 +275,7 @@ class DataProfiling:
             for ax in axs.flat[num_plots:]:
                 ax.axis("off")
 
-            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
+            savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_histogram_numeric_distribution.png")
             plt.show()
         else:
             print("There are no numeric variables.")
@@ -363,7 +364,7 @@ class DataProfiling:
             plt.legend()
 
             # Save and show the plot
-            savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_outliers_comparison.png")
+            savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_outliers_comparison.png")
             show()
         else:
             print("There are no numeric variables.")
@@ -379,7 +380,7 @@ class DataProfiling:
             values.to_list(),
             title=f"Target distribution (target={self.data_loader.target})",
         )
-        savefig(f"graphs/data_profiling/data_distribution/{self.data_loader.file_tag}_class_distribution.png")
+        savefig(f"graphs/classification/data_profiling/data_distribution/{self.data_loader.file_tag}_class_distribution.png")
         show()
 
     def _analyse_date_granularity(self, data: DataFrame, var: str, levels: list[str]) -> ndarray:
@@ -411,7 +412,7 @@ class DataProfiling:
 
         for v_date in variables_types["date"]:
             self._analyse_date_granularity(self.data, v_date, ["year", "quarter", "month", "day"])
-            savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_{v_date}.png")
+            savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_{v_date}.png")
             show()
 
     def _decompose_lat_lon(self, data: DataFrame) -> DataFrame:
@@ -500,7 +501,7 @@ class DataProfiling:
              "Latitude Minutes", "Longitude Minutes",
              "Latitude Seconds", "Longitude Seconds"]
         )
-        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_location.png")
+        savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_location.png")
         show()
 
     def plot_law_code_granularity_analysis(self):
@@ -514,7 +515,7 @@ class DataProfiling:
             ["OFNS_DESC", "PD_DESC", "LAW_CODE"]
         )
 
-        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_law_code.png")
+        savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_law_code.png")
         show()
 
     def plot_borough_granularity_analysis(self):
@@ -527,7 +528,7 @@ class DataProfiling:
             "borough",
             ["ARREST_BORO"]
         )
-        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_borough.png")
+        savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_borough.png")
         show()
 
     def plot_age_granularity_analysis(self):
@@ -540,7 +541,7 @@ class DataProfiling:
             "age",
             ["AGE_GROUP"]
         )
-        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_age.png")
+        savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_age.png")
         show()
 
     def plot_race_granularity_analysis(self):
@@ -553,7 +554,7 @@ class DataProfiling:
             "race",
             ["PERP_RACE"]
         )
-        savefig(f"graphs/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_race.png")
+        savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_race.png")
         show()
 
     def plot_sparsity_analysis(self):
@@ -573,7 +574,7 @@ class DataProfiling:
                 for j in range(i + 1, len(vars)):
                     var2: str = vars[j]
                     plot_multi_scatters_chart(data, var1, var2, ax=axs[i, j - 1])
-            savefig(f"graphs/data_profiling/data_sparsity/{self.data_loader.file_tag}_sparsity_study.png")
+            savefig(f"graphs/classification/data_profiling/data_sparsity/{self.data_loader.file_tag}_sparsity_study.png")
             show()
         else:
             print("Sparsity class: there are no variables.")
@@ -592,7 +593,7 @@ class DataProfiling:
                 for j in range(i + 1, len(vars)):
                     var2: str = vars[j]
                     plot_multi_scatters_chart(data, var1, var2, self.data_loader.target, ax=axs[i, j - 1])
-            savefig(f"graphs/data_profiling/data_sparsity/{self.data_loader.file_tag}_sparsity_per_class_study.png")
+            savefig(f"graphs/classification/data_profiling/data_sparsity/{self.data_loader.file_tag}_sparsity_per_class_study.png")
             show()
         else:
             print("Sparsity per class: there are no variables.")
@@ -619,5 +620,101 @@ class DataProfiling:
             vmin=0,
             vmax=1,
         )
-        savefig(f"graphs/data_profiling/data_sparsity/{self.data_loader.file_tag}_correlation_analysis.png", dpi=dpi)
+        savefig(f"graphs/classification/data_profiling/data_sparsity/{self.data_loader.file_tag}_correlation_analysis.png", dpi=dpi)
+        show()
+
+    # %% Time Series
+
+    def plot_unvariate_forecasting(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+        print("\nNr. Records = ", series.shape[0])
+        print("First timestamp", series.index[0])
+        print("Last timestamp", series.index[-1])
+
+        figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+        plot_line_chart(
+            series.index.to_list(),
+            series.to_list(),
+            xlabel=series.index.name,
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} hourly {self.data_loader.target}",
+        )
+        savefig(f"graphs/forecasting/data_profiling/data_dimensionality/{self.data_loader.file_tag}_unvariate_forecasting.png")
+        show()
+
+    def _plot_ts_multivariate_chart(self, data: DataFrame, title: str) -> list[Axes]:
+        fig: Figure
+        axs: list[Axes]
+        fig, axs = subplots(data.shape[1], 1, figsize=(3 * HEIGHT, HEIGHT / 2 * data.shape[1]))
+        fig.suptitle(title)
+
+        for i in range(data.shape[1]):
+            col: str = data.columns[i]
+            plot_line_chart(
+                data[col].index.to_list(),
+                data[col].to_list(),
+                ax=axs[i],
+                xlabel=data.index.name,
+                ylabel=col,
+            )
+        return axs
+
+    def plot_multivariate_forecasting(self):
+
+        print("\nNr. Records = ", self.data_loader.data.shape)
+        print("First timestamp", self.data_loader.data.index[0])
+        print("Last timestamp", self.data_loader.data.index[-1])
+
+        self._plot_ts_multivariate_chart(self.data_loader.data, title=f"{self.data_loader.file_tag} {self.data_loader.target}")
+        savefig(f"graphs/forecasting/data_profiling/data_dimensionality/{self.data_loader.file_tag}_multivariate_forecasting.png")
+        show()
+
+    def _ts_aggregation_by(self, data: Series | DataFrame, gran_level: str = "D", agg_func: str = "mean",
+    ) -> Series | DataFrame:
+        df: Series | DataFrame = data.copy()
+        index: Index[Period] = df.index.to_period(gran_level)
+        df = df.groupby(by=index, dropna=True, sort=True).agg(agg_func)
+        df.index.drop_duplicates()
+        df.index = df.index.to_timestamp()
+
+        return df
+
+    def plot_granularity_forecasting(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+
+        grans: list[str] = ["D", "W", "M"]
+        fig: Figure
+        axs: list[Axes]
+        fig, axs = subplots(len(grans), 1, figsize=(3 * HEIGHT, HEIGHT / 2 * len(grans)))
+        fig.suptitle(f"{self.data_loader.file_tag} {self.data_loader.target} aggregation study")
+
+        for i in range(len(grans)):
+            ss: Series = ts_aggregation_by(series, grans[i])
+            plot_line_chart(
+                ss.index.to_list(),
+                ss.to_list(),
+                ax=axs[i],
+                xlabel=f"{ss.index.name} ({grans[i]})",
+                ylabel=self.data_loader.target,
+                title=f"granularity={grans[i]}",
+            )
+        savefig(f"graphs/forecasting/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity.png")
+        show()
+
+    def plot_weekly_aggregation(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+        ss_weeks: Series = ts_aggregation_by(series, gran_level="W", agg_func=sum)
+
+        figure(figsize=(3 * HEIGHT, HEIGHT))
+        plot_line_chart(
+            ss_weeks.index.to_list(),
+            ss_weeks.to_list(),
+            xlabel="weeks",
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} weekly {self.data_loader.target}",
+        )
+        savefig(f"graphs/forecasting/data_profiling/data_distribution/{self.data_loader.file_tag}_granularity_forecasting.png")
         show()
