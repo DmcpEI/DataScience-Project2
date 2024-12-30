@@ -646,13 +646,13 @@ class DataProcessing:
         # vars_to_drop = self.select_low_variance_variables(max_threshold=3)
         # print(f"Variables to drop: {vars_to_drop}")
         self.study_variance(self.X_train, self.X_test, self.y_train, self.y_test,
-                            max_threshold=1, lag=0.2, metric="f1", file_tag=self.data_loader.file_tag)
+                            max_threshold=1, lag=0.05, metric="f1", file_tag=self.data_loader.file_tag)
 
 
         vars_to_drop_2 = self.select_redundant_variables(min_threshold=0.9)
         print(f"Variables to drop: {vars_to_drop_2}")
         self.study_redundancy_for_feature_selection(self.X_train, self.X_test, self.y_train, self.y_test,
-                                                    min_threshold=0.3, lag=0.3, metric="f1",
+                                                    min_threshold=0.3, lag=0.05, metric="f1",
                                                     file_tag=self.data_loader.file_tag)
 
 
@@ -767,8 +767,8 @@ class DataProcessing:
         print(f"Feature selection applied. Train shape: {self.X_train.shape}, Test shape: {self.X_test.shape}")
         print(f"Variables dropped: {vars_to_remove}")
 
-    def select_redundant_variables(self, min_threshold) -> list:
-        df: DataFrame = self.data_loader.data.drop(self.target, axis=1, inplace=False)
+    def select_redundant_variables(self, X_train: DataFrame, min_threshold) -> list:
+        df: DataFrame = X_train.drop(self.target, axis=1, inplace=False)
         corr_matrix: DataFrame = abs(df.corr())
         variables: Index[str] = corr_matrix.columns
         vars2drop: list = []
