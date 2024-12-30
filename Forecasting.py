@@ -44,16 +44,32 @@ data_profiling1 = DataProfiling(data_loader1)
 data_profiling2 = DataProfiling(data_loader2)
 
 # Data Dimensionality
-data_profiling1.plot_unvariate_forecasting()
-data_profiling2.plot_unvariate_forecasting()
+# data_profiling1.plot_unvariate_forecasting()
+# data_profiling2.plot_unvariate_forecasting()
 
-data_profiling1.plot_multivariate_forecasting()
-data_profiling2.plot_multivariate_forecasting()
+# data_profiling1.plot_multivariate_forecasting()
+# data_profiling2.plot_multivariate_forecasting()
 
 # Data Granularity
-data_profiling1.plot_granularity_forecasting()
-data_profiling2.plot_granularity_forecasting()
+# data_profiling1.plot_granularity_forecasting()
+# data_profiling2.plot_granularity_forecasting()
 
 # Data Distribution
-# data_profiling1.plot_weekly_aggregation()
-# data_profiling2.plot_weekly_aggregation()
+# data_profiling1.plot_distribuition_boxplot()
+# data_profiling2.plot_distribuition_boxplot()
+
+# data_profiling1.plot_distribuition_histograms()
+# data_profiling2.plot_distribuition_histograms()
+
+# data_profiling1.plot_distribuition_lag_plots()
+# data_profiling2.plot_distribuition_lag_plots()
+
+# data_profiling1.plot_autocorrelation()
+# data_profiling2.plot_autocorrelation()
+
+# Data Stationarity
+# data_profiling1.plot_sesonality()
+# data_profiling2.plot_sesonality()
+#
+# data_profiling1.augmented_dicker_fuller_test()
+# data_profiling2.augmented_dicker_fuller_test()

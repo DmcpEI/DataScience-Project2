@@ -107,13 +107,13 @@ class DataModeling:
         # Accuracy
         figure(figsize=(7, 5))
         best_model, params= self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="accuracy")
-        savefig(f"graphs/data_modeling/nb/{self.data_loader.file_tag}_nb_accuracy_study.png")
+        savefig(f"graphs/classification/data_modeling/nb/{self.data_loader.file_tag}_nb_accuracy_study.png")
         show()
 
         # Recall
         figure(figsize=(7, 5))
         best_model, params= self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="recall")
-        savefig(f"graphs/data_modeling/nb/{self.data_loader.file_tag}_nb_recall_study.png")
+        savefig(f"graphs/classification/data_modeling/nb/{self.data_loader.file_tag}_nb_recall_study.png")
         show()
 
         # Print model performance
@@ -127,7 +127,7 @@ class DataModeling:
         figure()
         evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(
-            f'graphs/data_modeling/nb/{self.data_loader.file_tag}_{params["name"]}_best_{params["metric"]}_eval.png')
+            f'graphs/classification/data_modeling/nb/{self.data_loader.file_tag}_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
         return evaluation_results
@@ -183,7 +183,7 @@ class DataModeling:
         best_model, params = self.knn_study(
             trnX, trnY, tstX, tstY, self.data_loader.file_tag, k_max=k_max, lag=lag, metric="accuracy"
         )
-        savefig(f"graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_accuracy_study.png")
+        savefig(f"graphs/classification/data_modeling/knn/{self.data_loader.file_tag}_knn_accuracy_study.png")
         show()
 
         # Recall Study
@@ -191,7 +191,7 @@ class DataModeling:
         best_model, params = self.knn_study(
             trnX, trnY, tstX, tstY, self.data_loader.file_tag, k_max=k_max, lag=lag, metric="recall"
         )
-        savefig(f"graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_recall_study.png")
+        savefig(f"graphs/classification/data_modeling/knn/{self.data_loader.file_tag}_knn_recall_study.png")
         show()
 
         # Print model performance
@@ -204,7 +204,7 @@ class DataModeling:
         figure()
         evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(
-            f'graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_{params["name"]}_best_{params["metric"]}_eval.png'
+            f'graphs/classification/data_modeling/knn/{self.data_loader.file_tag}_knn_{params["name"]}_best_{params["metric"]}_eval.png'
         )
         show()
 
@@ -232,7 +232,7 @@ class DataModeling:
             ylabel=params["metric"],
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/knn/{self.data_loader.file_tag}_knn_overfitting.png")
+        savefig(f"graphs/classification/data_modeling/knn/{self.data_loader.file_tag}_knn_overfitting.png")
         show()
 
         return evaluation_results
@@ -284,14 +284,14 @@ class DataModeling:
         figure()
         best_model, params = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
                                               metric='accuracy')
-        savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_accuracy_study.png')
+        savefig(f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_accuracy_study.png')
         show()
 
         # Recall Study
         figure()
         best_model, params = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
                                               metric='recall')
-        savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_recall_study.png')
+        savefig(f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_recall_study.png')
         show()
 
         # Print model performance
@@ -305,11 +305,11 @@ class DataModeling:
         figure()
         evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
         savefig(
-            f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["name"]}_best_{params["metric"]}_eval.png')
+            f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
         # Variables Importance
-        tree_filename: str = f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_best_tree'
+        tree_filename: str = f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_best_tree'
         max_depth2show = 3
         st_labels: list[str] = [str(value) for value in labels]
 
@@ -344,7 +344,7 @@ class DataModeling:
             ylabel="variables",
             percentage=True,
         )
-        savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_vars_ranking.png')
+        savefig(f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_vars_ranking.png')
 
         # Overfitting Study
         crit: Literal["entropy", "gini"] = params["params"][0]
@@ -370,7 +370,7 @@ class DataModeling:
             ylabel=str(params["metric"]),
             percentage=True,
         )
-        savefig(f'graphs/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_overfitting.png')
+        savefig(f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_{params["metric"]}_overfitting.png')
         show()
 
         return evaluation_results
@@ -461,7 +461,7 @@ class DataModeling:
         # Accuracy Study
         figure()
         best_model, params = self.mlp_study(trnX, trnY, tstX, tstY, nr_max_iterations=NR_MAX_ITER, lag=LAG, metric=eval_metric)
-        savefig(f"graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_study.png")
+        savefig(f"graphs/classification/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_study.png")
         show()
 
         print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
@@ -471,7 +471,7 @@ class DataModeling:
         prd_tst: array = best_model.predict(tstX)
         figure()
         evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
-        savefig(f'graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{params["name"]}_best_{params["metric"]}_eval.png')
+        savefig(f'graphs/classification/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
         # Overfitting Study
@@ -511,7 +511,7 @@ class DataModeling:
             ylabel=str(eval_metric),
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_overfitting.png")
+        savefig(f"graphs/classification/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_overfitting.png")
 
         # Loss Study
         figure()
@@ -523,7 +523,7 @@ class DataModeling:
             ylabel="loss",
             percentage=False,
         )
-        savefig(f"graphs/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_loss_curve.png")
+        savefig(f"graphs/classification/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_loss_curve.png")
 
         return evaluation_results
 
@@ -600,7 +600,7 @@ class DataModeling:
             lag=250,
             metric=eval_metric,
         )
-        savefig(f"graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_study.png")
+        savefig(f"graphs/classification/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_study.png")
         show()
 
         print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
@@ -610,7 +610,7 @@ class DataModeling:
         prd_tst: array = best_model.predict(tstX)
         figure()
         evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
-        savefig(f'graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{params["name"]}_best_{params["metric"]}_eval.png')
+        savefig(f'graphs/classification/data_modeling/rf/{self.data_loader.file_tag}_rf_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
         # Variables Importance Study
@@ -636,7 +636,7 @@ class DataModeling:
             ylabel="variables",
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_vars_ranking.png")
+        savefig(f"graphs/classification/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_vars_ranking.png")
 
         # Overfitting Study
         d_max: int = params["params"][0]
@@ -664,7 +664,7 @@ class DataModeling:
             ylabel=str(eval_metric),
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_overfitting.png")
+        savefig(f"graphs/classification/data_modeling/rf/{self.data_loader.file_tag}_rf_{eval_metric}_overfitting.png")
 
         return evaluation_results
 
@@ -741,7 +741,7 @@ class DataModeling:
             lag=250,
             metric=eval_metric,
         )
-        savefig(f"graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_study.png")
+        savefig(f"graphs/classification/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_study.png")
         show()
 
         print(f"Best Model: {params['name']} | Metric: {params['metric']} | Score: {params[params['metric']]}")
@@ -751,7 +751,7 @@ class DataModeling:
         prd_tst: array = best_model.predict(tstX)
         figure()
         evaluation_results = self.plot_evaluation_results(params, trnY, prd_trn, tstY, prd_tst, labels, self.data_loader.file_tag)
-        savefig(f'graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{params["name"]}_best_{params["metric"]}_eval.png')
+        savefig(f'graphs/classification/data_modeling/gb/{self.data_loader.file_tag}_gb_{params["name"]}_best_{params["metric"]}_eval.png')
         show()
 
         # Variables Importance Study
@@ -780,7 +780,7 @@ class DataModeling:
             ylabel="variables",
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_vars_ranking.png")
+        savefig(f"graphs/classification/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_vars_ranking.png")
 
         # Overfitting Study
         d_max: int = params["params"][0]
@@ -808,6 +808,6 @@ class DataModeling:
             ylabel=str(eval_metric),
             percentage=True,
         )
-        savefig(f"graphs/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_overfitting.png")
+        savefig(f"graphs/classification/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_overfitting.png")
 
         return evaluation_results

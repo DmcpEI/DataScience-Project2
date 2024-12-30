@@ -1,16 +1,20 @@
 import math
 import pandas as pd
+from matplotlib.gridspec import GridSpec
 from pandas import Series, DataFrame, Index, Period
 import numpy as np
-from numpy import ndarray
+from numpy import ndarray, array
 from matplotlib import pyplot as plt
-from matplotlib.pyplot import figure, savefig, show, subplots
+from matplotlib.pyplot import figure, savefig, show, subplots, plot, legend
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from seaborn import heatmap
 from scipy.stats import norm, expon, lognorm
+from statsmodels.tsa.seasonal import DecomposeResult, seasonal_decompose
+from statsmodels.tsa.stattools import adfuller
+
 from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
-    plot_multi_scatters_chart, set_chart_labels, define_grid, plot_line_chart, ts_aggregation_by
+    plot_multi_scatters_chart, set_chart_labels, define_grid, plot_line_chart, ts_aggregation_by, plot_multiline_chart
 
 
 class DataProfiling:
@@ -703,18 +707,180 @@ class DataProfiling:
         savefig(f"graphs/forecasting/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity.png")
         show()
 
-    def plot_weekly_aggregation(self):
+    def plot_distribuition_boxplot(self):
 
         series: Series = self.data_loader.data[self.data_loader.target]
-        ss_weeks: Series = ts_aggregation_by(series, gran_level="W", agg_func=sum)
+
+        ss_days: Series = ts_aggregation_by(series, "D")
+        ss_weeks: Series = ts_aggregation_by(series, "W")
+        ss_months: Series = ts_aggregation_by(series, "M")
+
+        fig: Figure
+        axs: array
+        fig, axs = subplots(2, 3, figsize=(2 * HEIGHT, HEIGHT))
+        set_chart_labels(axs[0, 0], title="DAILY")
+        axs[0, 0].boxplot(ss_days)
+        set_chart_labels(axs[0, 1], title="WEEKLY")
+        axs[0, 1].boxplot(ss_weeks)
+        set_chart_labels(axs[0, 2], title="MONTHLY")
+        axs[0, 2].boxplot(ss_months)
+
+        axs[1, 0].grid(False)
+        axs[1, 0].set_axis_off()
+        axs[1, 0].text(0.2, 0, str(ss_days.describe()), fontsize="small")
+
+        axs[1, 1].grid(False)
+        axs[1, 1].set_axis_off()
+        axs[1, 1].text(0.2, 0, str(ss_weeks.describe()), fontsize="small")
+
+        axs[1, 2].grid(False)
+        axs[1, 2].set_axis_off()
+        axs[1, 2].text(0.2, 0, str(ss_months.describe()), fontsize="small")
+
+        show()
+
+    def plot_distribuition_histograms(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+
+        ss_days: Series = ts_aggregation_by(series, gran_level="D", agg_func=sum)
+        ss_weeks: Series = ts_aggregation_by(series, "W", agg_func=sum)
+        ss_months: Series = ts_aggregation_by(series, gran_level="M", agg_func=sum)
+        ss_quarters: Series = ts_aggregation_by(series, gran_level="Q", agg_func=sum)
+
+        grans: list[Series] = [ss_days, ss_weeks, ss_months, ss_quarters]
+        gran_names: list[str] = ["Daily", "Weekly", "Monthly", "Quarterly"]
+        fig: Figure
+        axs: array
+        fig, axs = subplots(1, len(grans), figsize=(len(grans) * HEIGHT, HEIGHT))
+        fig.suptitle(f"{self.data_loader.file_tag} {self.data_loader.target}")
+        for i in range(len(grans)):
+            set_chart_labels(axs[i], title=f"{gran_names[i]}", xlabel=self.data_loader.target, ylabel="Nr records")
+            axs[i].hist(grans[i].values)
+        show()
+
+    def _get_lagged_series(self, series: Series, max_lag: int, delta: int = 1):
+        lagged_series: dict = {"original": series, "lag 1": series.shift(1)}
+        for i in range(delta, max_lag + 1, delta):
+            lagged_series[f"lag {i}"] = series.shift(i)
+        return lagged_series
+
+    def plot_distribuition_lag_plots(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+
+        figure(figsize=(3 * HEIGHT, HEIGHT))
+        lags = self._get_lagged_series(series, 20, 10)
+        plot_multiline_chart(series.index.to_list(), lags, xlabel=self.data_loader.read_options["index_col"], ylabel=self.data_loader.target)
+        show()
+
+    def _autocorrelation_study(self, series: Series, max_lag: int, delta: int = 1):
+        k: int = int(max_lag / delta)
+        fig = figure(figsize=(4 * HEIGHT, 2 * HEIGHT), constrained_layout=True)
+        gs = GridSpec(2, k, figure=fig)
+
+        series_values: list = series.tolist()
+        for i in range(1, k + 1):
+            ax = fig.add_subplot(gs[0, i - 1])
+            lag = i * delta
+            ax.scatter(series.shift(lag).tolist(), series_values)
+            ax.set_xlabel(f"lag {lag}")
+            ax.set_ylabel("original")
+        ax = fig.add_subplot(gs[1, :])
+        ax.acorr(series, maxlags=max_lag)
+        ax.set_title("Autocorrelation")
+        ax.set_xlabel("Lags")
+        return
+
+    def plot_autocorrelation(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+        self._autocorrelation_study(series, 10, 1)
+        show()
+
+    def _plot_components(
+            self, series: Series, title: str = "", x_label: str = "time", y_label: str = "",
+    ) -> list[Axes]:
+        decomposition: DecomposeResult = seasonal_decompose(series, model="add")
+        components: dict = {
+            "observed": series,
+            "trend": decomposition.trend,
+            "seasonal": decomposition.seasonal,
+            "residual": decomposition.resid,
+        }
+        rows: int = len(components)
+        fig: Figure
+        axs: list[Axes]
+        fig, axs = subplots(rows, 1, figsize=(3 * HEIGHT, rows * HEIGHT))
+        fig.suptitle(f"{title}")
+        i: int = 0
+        for key in components:
+            set_chart_labels(axs[i], title=key, xlabel=x_label, ylabel=y_label)
+            axs[i].plot(components[key])
+            i += 1
+        return axs
+
+    def plot_sesonality(self):
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+
+        self._plot_components(
+            series,
+            title=f"{self.data_loader.file_tag} hourly {self.data_loader.target}",
+            x_label=series.index.name,
+            y_label=self.data_loader.target,
+        )
+        show()
 
         figure(figsize=(3 * HEIGHT, HEIGHT))
         plot_line_chart(
-            ss_weeks.index.to_list(),
-            ss_weeks.to_list(),
-            xlabel="weeks",
+            series.index.to_list(),
+            series.to_list(),
+            xlabel=series.index.name,
             ylabel=self.data_loader.target,
-            title=f"{self.data_loader.file_tag} weekly {self.data_loader.target}",
+            title=f"{self.data_loader.file_tag} stationary study",
+            name="original",
         )
-        savefig(f"graphs/forecasting/data_profiling/data_distribution/{self.data_loader.file_tag}_granularity_forecasting.png")
+        n: int = len(series)
+        plot(series.index, [series.mean()] * n, "r-", label="mean")
+        legend()
         show()
+
+        BINS = 10
+        mean_line: list[float] = []
+
+        for i in range(BINS):
+            segment: Series = series[i * n // BINS: (i + 1) * n // BINS]
+            mean_value: list[float] = [segment.mean()] * (n // BINS)
+            mean_line += mean_value
+        mean_line += [mean_line[-1]] * (n - len(mean_line))
+
+        figure(figsize=(3 * HEIGHT, HEIGHT))
+        plot_line_chart(
+            series.index.to_list(),
+            series.to_list(),
+            xlabel=series.index.name,
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} stationary study",
+            name="original",
+            show_stdev=True,
+        )
+        n: int = len(series)
+        plot(series.index, mean_line, "r-", label="mean")
+        legend()
+        show()
+
+    def augmented_dicker_fuller_test(self):
+
+        def eval_stationarity(series: Series) -> bool:
+            result = adfuller(series)
+            print(f"ADF Statistic: {result[0]:.3f}")
+            print(f"p-value: {result[1]:.3f}")
+            print("Critical Values:")
+            for key, value in result[4].items():
+                print(f"\t{key}: {value:.3f}")
+            return result[1] <= 0.05
+
+        print(f"\nAugmented Dickey-Fuller Test for {self.data_loader.target} from the {self.data_loader.file_tag} dataset:")
+        series: Series = self.data_loader.data[self.data_loader.target]
+        print(f"The series {('is' if eval_stationarity(series) else 'is not')} stationary\n")

@@ -227,7 +227,7 @@ class DataProcessing:
             # Plot the results as a multibar chart
             figure()
             plot_multibar_chart(["NB", "KNN"], eval_results, title=plot_title, percentage=True)
-            savefig(f"graphs/data_preparation/{dataset}_{file_tag}_eval.png")
+            savefig(f"graphs/classification/data_preparation/{dataset}_{file_tag}_eval.png")
             show()
 
             return eval_results
@@ -244,7 +244,7 @@ class DataProcessing:
             # Plot the results as a multibar chart
             figure()
             plot_multibar_chart(["KNN"], eval_results, title=plot_title, percentage=True)
-            savefig(f"graphs/data_preparation/{dataset}_{file_tag}_eval.png")
+            savefig(f"graphs/classification/data_preparation/{dataset}_{file_tag}_eval.png")
             show()
 
             return eval_results
@@ -737,7 +737,7 @@ class DataProcessing:
             ylabel=metric,
             percentage=True,
         )
-        savefig(f"graphs/data_preparation/{file_tag}_fs_low_var_{metric}_study.png")
+        savefig(f"graphs/classification/data_preparation/{file_tag}_fs_low_var_{metric}_study.png")
         show()
 
     def apply_feature_selection(self, vars2drop: list[str], file_tag: str):
@@ -840,5 +840,5 @@ class DataProcessing:
             ylabel=metric,
             percentage=True,
         )
-        savefig(f"graphs/data_preparation/{file_tag}_fs_redundancy_{metric}_study.png")
+        savefig(f"graphs/classification/data_preparation/{file_tag}_fs_redundancy_{metric}_study.png")
         show()

@@ -31,6 +31,7 @@ class DataLoader:
 
         self.data = None
         self.labels = None
+        self.index_col = None
 
         # Store read options for reading CSV
         self.read_options = read_options if read_options else {}
