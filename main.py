@@ -260,10 +260,12 @@ data_processing2.y_test = y2_test
 # Handle Feature Selection
 vars_to_drop, vars_to_drop_2 = data_processing1.handle_feature_selection()
 vars2drop = vars_to_drop + [item for item in vars_to_drop_2 if item not in vars_to_drop]
+print(f"Variables to drop (combined): {vars2drop}")
 data_processing1.apply_feature_selection(vars2drop, file_tag="ny_arrests_feature_selection")
 
 vars_to_drop, vars_to_drop_2 = data_processing2.handle_feature_selection()
 vars2drop = vars_to_drop + [item for item in vars_to_drop_2 if item not in vars_to_drop]
+print(f"Variables to drop (combined): {vars2drop}")
 data_processing2.apply_feature_selection(vars2drop, file_tag="financial_distress_feature_selection")
 
 # Inspect columns in the processed datasets
