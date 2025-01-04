@@ -105,10 +105,10 @@ class DataModeling:
         print(f"Train#={len(trnX)} Test#={len(tstX)}")
 
         # Accuracy
-        figure(figsize=(7, 5))
-        best_model, params= self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="accuracy")
-        savefig(f"graphs/classification/data_modeling/nb/{self.data_loader.file_tag}_nb_accuracy_study.png")
-        show()
+        # figure(figsize=(7, 5))
+        # best_model, params= self.naive_Bayes_study(trnX, trnY, tstX, tstY, metric="accuracy")
+        # savefig(f"graphs/classification/data_modeling/nb/{self.data_loader.file_tag}_nb_accuracy_study.png")
+        # show()
 
         # Recall
         figure(figsize=(7, 5))
@@ -179,12 +179,12 @@ class DataModeling:
         print(f"Train#={len(trnX)} Test#={len(tstX)}")
 
         # Accuracy Study
-        figure()
-        best_model, params = self.knn_study(
-            trnX, trnY, tstX, tstY, self.data_loader.file_tag, k_max=k_max, lag=lag, metric="accuracy"
-        )
-        savefig(f"graphs/classification/data_modeling/knn/{self.data_loader.file_tag}_knn_accuracy_study.png")
-        show()
+        # figure()
+        # best_model, params = self.knn_study(
+        #     trnX, trnY, tstX, tstY, self.data_loader.file_tag, k_max=k_max, lag=lag, metric="accuracy"
+        # )
+        # savefig(f"graphs/classification/data_modeling/knn/{self.data_loader.file_tag}_knn_accuracy_study.png")
+        # show()
 
         # Recall Study
         figure()
@@ -281,11 +281,11 @@ class DataModeling:
         print(f'Train#={len(trnX)} Test#={len(tstX)}')
 
         # Accuracy Study
-        figure()
-        best_model, params = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
-                                              metric='accuracy')
-        savefig(f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_accuracy_study.png')
-        show()
+        # figure()
+        # best_model, params = self.trees_study(trnX, trnY, tstX, tstY, self.data_loader.file_tag, d_max=25,
+        #                                       metric='accuracy')
+        # savefig(f'graphs/classification/data_modeling/dt/{self.data_loader.file_tag}_dt_accuracy_study.png')
+        # show()
 
         # Recall Study
         figure()
@@ -445,7 +445,7 @@ class DataModeling:
 
         LAG: int = 500
         NR_MAX_ITER: int = 5000
-        eval_metric = "accuracy"
+        eval_metric = "recall"
 
         trnX: ndarray = self.X_train.values
         tstX: ndarray = self.X_test.values
@@ -458,7 +458,7 @@ class DataModeling:
         print(f'Train#={len(trnX)} Test#={len(tstX)}')
         print(f'Labels={labels}')
 
-        # Accuracy Study
+        # Recall Study
         figure()
         best_model, params = self.mlp_study(trnX, trnY, tstX, tstY, nr_max_iterations=NR_MAX_ITER, lag=LAG, metric=eval_metric)
         savefig(f"graphs/classification/data_modeling/mlp/{self.data_loader.file_tag}_mlp_{eval_metric}_study.png")
@@ -576,7 +576,7 @@ class DataModeling:
         return best_model, best_params
 
     def random_forest(self):
-        eval_metric = "accuracy"
+        eval_metric = "recall"
 
         trnX: ndarray = self.X_train.values
         tstX: ndarray = self.X_test.values
@@ -589,7 +589,7 @@ class DataModeling:
         print(f"Train#={len(trnX)} Test#={len(tstX)}")
         print(f"Labels={labels}")
 
-        # Accuracy Study
+        # Recall Study
         figure()
         best_model, params = self.random_forests_study(
             trnX,
@@ -717,7 +717,7 @@ class DataModeling:
         return best_model, best_params
 
     def gradient_boosting(self):
-        eval_metric = "accuracy"
+        eval_metric = "recall"
 
         trnX: ndarray = self.X_train.values
         tstX: ndarray = self.X_test.values
@@ -730,7 +730,7 @@ class DataModeling:
         print(f"Train#={len(trnX)} Test#={len(tstX)}")
         print(f"Labels={labels}")
 
-        # Accuracy Study
+        # Recall Study
         figure()
         best_model, params = self.gradient_boosting_study(
             trnX,

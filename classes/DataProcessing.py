@@ -642,27 +642,38 @@ class DataProcessing:
     def handle_feature_selection(self):
         print(f"\n\nHandling feature selection for the {self.data_loader.file_tag} dataset...\n")
 
-        vars_to_drop = []
-        vars_to_drop_2 = []
-
         if self.target == "JURISDICTION_CODE":
             max_threshold = 1.8
         elif self.target == "CLASS":
             max_threshold = 3
 
         self.study_variance(self.X_train, self.X_test, self.y_train, self.y_test,
-                            max_threshold, lag=0.1, metric="f1", file_tag=self.data_loader.file_tag)
-        vars_to_drop = self.select_low_variance_variables(self.X_train, max_threshold=1.5)
-        print(f"Variables to drop (variance): {vars_to_drop}")
-
-
+                            max_threshold, lag=0.1, metric="recall", file_tag=self.data_loader.file_tag)
+        
         self.study_redundancy_for_feature_selection(self.X_train, self.X_test, self.y_train, self.y_test,
-                                                    min_threshold=0.25, lag=0.05, metric="f1",
+                                                    min_threshold=0.25, lag=0.05, metric="recall",
                                                     file_tag=self.data_loader.file_tag)
-        vars_to_drop_2 = self.select_redundant_variables(self.X_train, min_threshold=0.9)
-        print(f"Variables to drop (redundancy): {vars_to_drop_2}")
+    
+    def select_variables_to_drop(self):
+        print(f"\n\nSelectiing variables to drop for the {self.data_loader.file_tag} dataset...\n")
 
-        return vars_to_drop, vars_to_drop_2
+        vars2drop = []
+        vars_to_drop = []
+        vars_to_drop_2 = []
+
+        if self.target == "JURISDICTION_CODE":
+            #vars_to_drop = self.select_low_variance_variables(self.X_train, max_threshold=1.0)
+            print(f"Variables to drop (variance): {vars_to_drop}")
+            vars_to_drop_2 = self.select_redundant_variables(self.X_train, min_threshold=0.5)
+            print(f"Variables to drop (redundancy): {vars_to_drop_2}")
+
+        elif self.target == "CLASS":
+            #vars_to_drop = self.select_low_variance_variables(self.X_train, max_threshold=1.5)
+            print(f"Variables to drop (variance): {vars_to_drop}")
+            vars_to_drop_2 = self.select_redundant_variables(self.X_train, min_threshold=0.35)
+            print(f"Variables to drop (redundancy): {vars_to_drop_2}")
+
+        return vars2drop
 
     def select_low_variance_variables(self, X_train: DataFrame, max_threshold: float) -> list[str]:
         """
