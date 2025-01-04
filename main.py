@@ -75,7 +75,7 @@ data_processing1.pre_encode_variables()
 # data_profiling2.plot_sparsity_analysis_per_class()
 
 # Data Encoding of NY Arrests
-# data_processing1.encode_variables()
+data_processing1.encode_variables()
 # Save the encoded data
 data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=True)
 
