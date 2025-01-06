@@ -90,7 +90,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def naive_bayes(self):
+    def naive_bayes_classification(self):
         """
         Evaluate Naive Bayes models for both accuracy and recall and generate plots for each metric.
         Returns the results for both evaluations.
@@ -164,7 +164,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def knn(self, k_max: int = 25, lag: int = 2) -> dict:
+    def knn_classification(self, k_max: int = 25, lag: int = 2) -> dict:
         """
         Evaluate KNN models for both accuracy and recall and generate plots for each metric.
         Returns the results for both evaluations.
@@ -268,7 +268,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def decision_tree(self):
+    def decision_tree_classification(self):
 
         trnX: ndarray = self.X_train.values
         tstX: ndarray = self.X_test.values
@@ -441,7 +441,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def mlp(self):
+    def mlp_classification(self):
 
         LAG: int = 500
         NR_MAX_ITER: int = 5000
@@ -575,7 +575,7 @@ class DataModeling:
         print(f'RF best for {best_params["params"][2]} trees (d={best_params["params"][0]} and f={best_params["params"][1]})')
         return best_model, best_params
 
-    def random_forest(self):
+    def random_forest_classification(self):
         eval_metric = "accuracy"
 
         trnX: ndarray = self.X_train.values
@@ -716,7 +716,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def gradient_boosting(self):
+    def gradient_boosting_classification(self):
         eval_metric = "accuracy"
 
         trnX: ndarray = self.X_train.values
