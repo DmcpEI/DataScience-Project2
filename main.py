@@ -100,7 +100,7 @@ techniques1 = data_processing1.handle_missing_values_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Missing Values of the {data_loader1.file_tag} dataset is Missing Value Removal\n")
 data_processing1.apply_best_missing_value_approach_classification('Remove MV', techniques1)
 
-techniques2 = data_processing2.handle_missing_values()
+# techniques2 = data_processing2.handle_missing_values_classification()
 print(f"\nThe {data_loader2.file_tag} dataset doesnt have missing values\n")
 
 # Save the data
