@@ -1,4 +1,6 @@
 # %% Class Imports
+import json
+
 import numpy as np
 import pandas as pd
 from pandas import Series
@@ -193,3 +195,74 @@ results_summary = {
     "NY Arrests": {},  # Dataset 1
     "GDP": {}  # Dataset 2
 }
+
+# Simple Average
+print("\nSimple Average Forecasting Approach:")
+results_summary["NY Arrests"]["Simple Average"] = data_modeling1.simple_average_model_forecasting()
+results_summary["GDP"]["Simple Average"] = data_modeling2.simple_average_model_forecasting()
+
+print("\nSimple Average Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["Simple Average"])
+print("GDP:", results_summary["GDP"]["Simple Average"])
+
+# Persistence Model
+print("\nPersistence Model Forecasting Approach:")
+results_summary["NY Arrests"]["Persistence Model"] = data_modeling1.persistence_model_forecasting()
+results_summary["GDP"]["Persistence Model"] = data_modeling2.persistence_model_forecasting()
+
+print("\nPersistence Model Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["Persistence Model"])
+print("GDP:", results_summary["GDP"]["Persistence Model"])
+
+# Rolling Mean
+print("\nRolling Mean Forecasting Approach:")
+results_summary["NY Arrests"]["Rolling Mean"] = data_modeling1.rolling_mean_model_forecasting()
+results_summary["GDP"]["Rolling Mean"] = data_modeling2.rolling_mean_model_forecasting()
+
+print("\nRolling Mean Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["Rolling Mean"])
+print("GDP:", results_summary["GDP"]["Rolling Mean"])
+
+# Exponential Smoothing
+print("\nExponential Smoothing Forecasting Approach:")
+results_summary["NY Arrests"]["Exponential Smoothing"] = data_modeling1.exponential_smoothing_model_forecasting()
+results_summary["GDP"]["Exponential Smoothing"] = data_modeling2.exponential_smoothing_model_forecasting()
+
+print("\nExponential Smoothing Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["Exponential Smoothing"])
+print("GDP:", results_summary["GDP"]["Exponential Smoothing"])
+
+# Linear Regression
+print("\nLinear Regression Forecasting Approach:")
+results_summary["NY Arrests"]["Linear Regression"] = data_modeling1.linear_regression_model_forecasting()
+results_summary["GDP"]["Linear Regression"] = data_modeling2.linear_regression_model_forecasting()
+
+print("\nLinear Regression Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["Linear Regression"])
+print("GDP:", results_summary["GDP"]["Linear Regression"])
+
+# ARIMA
+print("\nARIMA Forecasting Approach:")
+results_summary["NY Arrests"]["ARIMA"] = data_modeling1.arima_model_forecasting()
+results_summary["GDP"]["ARIMA"] = data_modeling2.arima_model_forecasting()
+
+print("\nARIMA Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["ARIMA"])
+print("GDP:", results_summary["GDP"]["ARIMA"])
+
+# LSTM
+print("\nLSTM Forecasting Approach:")
+results_summary["NY Arrests"]["LSTM"] = data_modeling1.lstm_model_forecasting()
+results_summary["GDP"]["LSTM"] = data_modeling2.lstm_model_forecasting()
+
+print("\nLSTM Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["LSTM"])
+print("GDP:", results_summary["GDP"]["LSTM"])
+
+# Save results to a file (optional)
+with open("forecasting_evaluation_results_summary.json", "w") as file:
+    json.dump(results_summary, file, indent=4)
+
+# Print the full summary at the end
+print("\nFull Evaluation Results Summary:")
+print(json.dumps(results_summary, indent=4))
