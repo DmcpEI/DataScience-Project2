@@ -53,7 +53,7 @@ class DataProfiling:
         self.data = self.data_loader.data
         self.target = self.data_loader.target
 
-    def plot_records_variables(self):
+    def plot_records_variables_classification(self):
         """Plots number of records and variables."""
         figure(figsize=(6, 5))
         values: dict[str, int] = {"Nº records": self.data.shape[0], "Nº variables": self.data.shape[1]}
@@ -63,7 +63,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_dimensionality/{self.data_loader.file_tag}_records_variables.png")
         show()
 
-    def plot_variable_types(self):
+    def plot_variable_types_classification(self):
         """Plots the distribution of variable types."""
         variable_types: dict[str, list] = get_variable_types(self.data)
         print(variable_types)
@@ -78,7 +78,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_dimensionality/{self.data_loader.file_tag}_variable_types.png")
         show()
 
-    def plot_missing_values(self):
+    def plot_missing_values_classification(self):
         """Plots the number of missing values in the dataset."""
         mv: dict[str, int] = {}
         for var in self.data.columns:
@@ -97,7 +97,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_dimensionality/{self.data_loader.file_tag}_mv.png")
         show()
 
-    def plot_global_boxplots(self):
+    def plot_global_boxplots_classification(self):
         """Plots boxplots for all numerical variables."""
 
         variables_types: dict[str, list] = get_variable_types(self.data)
@@ -110,7 +110,7 @@ class DataProfiling:
         else:
             print("There are no numeric variables.")
 
-    def plot_single_variable_boxplots(self):
+    def plot_single_variable_boxplots_classification(self):
         """Plots boxplots for each numerical variable."""
         variables_types: dict[str, list] = get_variable_types(self.data)
         numeric: list[str] = variables_types["numeric"]
@@ -143,7 +143,7 @@ class DataProfiling:
         else:
             print("There are no numeric variables.")
 
-    def plot_histograms(self):
+    def plot_histograms_classification(self):
         """Plots histograms for all numerical variables."""
         variables_types: dict[str, list] = get_variable_types(self.data)
         numeric: list[str] = variables_types["numeric"]
@@ -241,7 +241,7 @@ class DataProfiling:
         ax.set_ylabel("Density")
         ax.legend()
 
-    def plot_histograms_distribution(self):
+    def plot_histograms_distribution_classification(self):
 
         """Plots histograms for all numerical variables and fits known distributions."""
         variables_types: dict[str, list] = get_variable_types(self.data)
@@ -340,7 +340,7 @@ class DataProfiling:
 
         return {"iqr": outliers_iqr, "stdev": outliers_stdev}
 
-    def plot_outlier_comparison(self):
+    def plot_outlier_comparison_classification(self):
         """
         Plot a comparison of outlier counts using IQR and stdev criteria.
         """
@@ -373,7 +373,7 @@ class DataProfiling:
         else:
             print("There are no numeric variables.")
 
-    def plot_class_distribution(self):
+    def plot_class_distribution_classification(self):
         """Plots the distribution of the target variable."""
         values: Series = self.data[self.data_loader.target].value_counts()
         print(values)
@@ -408,7 +408,7 @@ class DataProfiling:
             )
         return axs
 
-    def plot_date_granularity_analysis(self):
+    def plot_date_granularity_analysis_classification(self):
         """Analyzes the granularity of date variables."""
 
         variables_types: dict[str, list] = get_variable_types(self.data)
@@ -480,7 +480,7 @@ class DataProfiling:
             )
         return axs
 
-    def plot_location_granularity_analysis(self):
+    def plot_location_granularity_analysis_classification(self):
         """
         Analyzes the granularity of location variables.
 
@@ -508,7 +508,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_location.png")
         show()
 
-    def plot_law_code_granularity_analysis(self):
+    def plot_law_code_granularity_analysis_classification(self):
         if self.data.empty:
             print("No valid LAW_CAT_CD data to analyze.")
             return
@@ -522,7 +522,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_law_code.png")
         show()
 
-    def plot_borough_granularity_analysis(self):
+    def plot_borough_granularity_analysis_classification(self):
         """
         Analyzes the granularity of race variables.
         """
@@ -535,7 +535,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_borough.png")
         show()
 
-    def plot_age_granularity_analysis(self):
+    def plot_age_granularity_analysis_classification(self):
         """
         Analyzes the granularity of race variables.
         """
@@ -548,7 +548,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_age.png")
         show()
 
-    def plot_race_granularity_analysis(self):
+    def plot_race_granularity_analysis_classification(self):
         """
         Analyzes the granularity of race variables.
         """
@@ -561,7 +561,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_race.png")
         show()
 
-    def plot_sparsity_analysis(self):
+    def plot_sparsity_analysis_classification(self):
         """Visualizes sparsity in the dataset."""
 
         data = self.data.dropna()
@@ -583,7 +583,7 @@ class DataProfiling:
         else:
             print("Sparsity class: there are no variables.")
 
-    def plot_sparsity_analysis_per_class(self):
+    def plot_sparsity_analysis_per_class_classification(self):
         """Visualizes sparsity in the dataset."""
 
         data = self.data.dropna()
@@ -602,7 +602,7 @@ class DataProfiling:
         else:
             print("Sparsity per class: there are no variables.")
 
-    def plot_correlation_analysis(self, dpi=300, figsize=(15, 15)):
+    def plot_correlation_analysis_classification(self, dpi=300, figsize=(15, 15)):
         """
         Displays a correlation heatmap for all variables in the dataset.
 
@@ -627,7 +627,7 @@ class DataProfiling:
         savefig(f"graphs/classification/data_profiling/data_sparsity/{self.data_loader.file_tag}_correlation_analysis.png", dpi=dpi)
         show()
 
-    # %% Time Series
+    # %% Forecasting
 
     def plot_unvariate_forecasting(self):
 
@@ -674,36 +674,87 @@ class DataProfiling:
         savefig(f"graphs/forecasting/data_profiling/data_dimensionality/{self.data_loader.file_tag}_multivariate_forecasting.png")
         show()
 
-    def _ts_aggregation_by(self, data: Series | DataFrame, gran_level: str = "D", agg_func: str = "mean",
+    def ts_aggregation_by(
+            self,
+            data: Series | DataFrame,
+            gran_level: str = "D",  # Default to daily
     ) -> Series | DataFrame:
-        df: Series | DataFrame = data.copy()
-        index: Index[Period] = df.index.to_period(gran_level)
-        df = df.groupby(by=index, dropna=True, sort=True).agg(agg_func)
-        df.index.drop_duplicates()
-        df.index = df.index.to_timestamp()
+        df = data.copy()
+
+        # Determine aggregation function based on dataset type
+        agg_func = "sum" if self.data_loader.file_tag == "forecast_ny_arrests" else "mean"
+
+        # Check if input is a Series
+        is_series = isinstance(df, Series)
+        if is_series:
+            df = df.to_frame(name="value")  # Convert Series to DataFrame for processing
+
+        if gran_level in ["D", "M", "Y", "Q", "W"]:
+            # Standard pandas frequency aliases
+            index = df.index.to_period(gran_level)
+            df = df.groupby(by=index).agg(agg_func)
+            df.index = df.index.to_timestamp()  # Convert back to timestamp
+        elif gran_level == "five_years":
+            # Custom logic for five years
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+            df["five_years"] = (df.index.year // 5) * 5
+            df = df.groupby("five_years").agg(agg_func)
+            df.index = pd.to_datetime(df.index, format="%Y")  # Convert five years to timestamp
+        elif gran_level == "decade":
+            # Custom logic for decades
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+            df["decade"] = (df.index.year // 10) * 10
+            df = df.groupby("decade").agg(agg_func)
+            df.index = pd.to_datetime(df.index, format="%Y")  # Convert decade to timestamp
+        else:
+            raise ValueError(f"Unsupported granularity level: {gran_level}")
+
+        # Convert back to Series if input was a Series
+        if is_series:
+            df = df.squeeze()  # Convert single-column DataFrame to Series
 
         return df
 
     def plot_granularity_forecasting(self):
-
+        """
+        Plots the granularity study for the forecasting target.
+        """
         series: Series = self.data_loader.data[self.data_loader.target]
 
-        grans: list[str] = ["D", "W", "M"]
+        # Determine the granularity levels based on the file tag
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            grans: list[str] = ["D", "W", "M", "Q", "Y"]
+        else:
+            grans: list[str] = ["Y", "five_years", "decade"]
+
+        # Initialize the figure and axes
         fig: Figure
         axs: list[Axes]
-        fig, axs = subplots(len(grans), 1, figsize=(3 * HEIGHT, HEIGHT / 2 * len(grans)))
+
+        # If only one granularity level, axs will be a single Axes object
+        if len(grans) == 1:
+            fig, axs = subplots(1, 1, figsize=(3 * HEIGHT, HEIGHT))
+            axs = [axs]  # Convert to a list for consistent handling
+        else:
+            fig, axs = subplots(len(grans), 1, figsize=(3 * HEIGHT, HEIGHT / 2 * len(grans)))
+
         fig.suptitle(f"{self.data_loader.file_tag} {self.data_loader.target} aggregation study")
 
-        for i in range(len(grans)):
-            ss: Series = ts_aggregation_by(series, grans[i])
+        # Plot for each granularity level
+        for i, gran in enumerate(grans):
+            ss: Series = self.ts_aggregation_by(series, gran)
             plot_line_chart(
                 ss.index.to_list(),
                 ss.to_list(),
                 ax=axs[i],
-                xlabel=f"{ss.index.name} ({grans[i]})",
+                xlabel=f"{ss.index.name} ({gran})",
                 ylabel=self.data_loader.target,
-                title=f"granularity={grans[i]}",
+                title=f"granularity={gran}",
             )
+
+        # Save and show the plot
         savefig(f"graphs/forecasting/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity.png")
         show()
 
@@ -711,9 +762,9 @@ class DataProfiling:
 
         series: Series = self.data_loader.data[self.data_loader.target]
 
-        ss_days: Series = ts_aggregation_by(series, "D")
-        ss_weeks: Series = ts_aggregation_by(series, "W")
-        ss_months: Series = ts_aggregation_by(series, "M")
+        ss_days: Series = self.ts_aggregation_by(series, "D")
+        ss_weeks: Series = self.ts_aggregation_by(series, "W")
+        ss_months: Series = self.ts_aggregation_by(series, "M")
 
         fig: Figure
         axs: array
@@ -743,10 +794,10 @@ class DataProfiling:
 
         series: Series = self.data_loader.data[self.data_loader.target]
 
-        ss_days: Series = ts_aggregation_by(series, gran_level="D", agg_func=sum)
-        ss_weeks: Series = ts_aggregation_by(series, "W", agg_func=sum)
-        ss_months: Series = ts_aggregation_by(series, gran_level="M", agg_func=sum)
-        ss_quarters: Series = ts_aggregation_by(series, gran_level="Q", agg_func=sum)
+        ss_days: Series = self.ts_aggregation_by(series, gran_level="D")
+        ss_weeks: Series = self.ts_aggregation_by(series, "W")
+        ss_months: Series = self.ts_aggregation_by(series, gran_level="M")
+        ss_quarters: Series = self.ts_aggregation_by(series, gran_level="Q")
 
         grans: list[Series] = [ss_days, ss_weeks, ss_months, ss_quarters]
         gran_names: list[str] = ["Daily", "Weekly", "Monthly", "Quarterly"]

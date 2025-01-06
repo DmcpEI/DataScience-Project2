@@ -36,58 +36,58 @@ data_profiling2 = DataProfiling(data_loader2)
 data_processing1 = DataProcessing(data_loader1)
 data_processing2 = DataProcessing(data_loader2)
 
-data_processing1.pre_encode_variables()
+data_processing1.pre_encode_variables_classification()
 
 # Data Dimensionality
-# data_profiling1.plot_records_variables()
-# data_profiling2.plot_records_variables()
-# data_profiling1.plot_variable_types()
-# data_profiling2.plot_variable_types()
-# data_profiling1.plot_missing_values()
-# data_profiling2.plot_missing_values()
+data_profiling1.plot_records_variables_classification()
+data_profiling2.plot_records_variables_classification()
+data_profiling1.plot_variable_types_classification()
+data_profiling2.plot_variable_types_classification()
+data_profiling1.plot_missing_values_classification()
+data_profiling2.plot_missing_values_classification()
 
 # Data Distribution
-# data_profiling1.plot_global_boxplots()
-# data_profiling2.plot_global_boxplots()
-# data_profiling1.plot_single_variable_boxplots()
-# data_profiling2.plot_single_variable_boxplots()
-# data_profiling1.plot_histograms()
-# data_profiling2.plot_histograms()
-# data_profiling1.plot_histograms_distribution()
-# data_profiling2.plot_histograms_distribution()
-# data_profiling1.plot_outlier_comparison()
-# data_profiling2.plot_outlier_comparison()
-# data_profiling1.plot_class_distribution()
-# data_profiling2.plot_class_distribution()
+data_profiling1.plot_global_boxplots_classification()
+data_profiling2.plot_global_boxplots_classification()
+data_profiling1.plot_single_variable_boxplots_classification()
+data_profiling2.plot_single_variable_boxplots_classification()
+data_profiling1.plot_histograms_classification()
+data_profiling2.plot_histograms_classification()
+data_profiling1.plot_histograms_distribution_classification()
+data_profiling2.plot_histograms_distribution_classification()
+data_profiling1.plot_outlier_comparison_classification()
+data_profiling2.plot_outlier_comparison_classification()
+data_profiling1.plot_class_distribution_classification()
+data_profiling2.plot_class_distribution_classification()
 
 # Data Granularity
-# data_profiling1.plot_date_granularity_analysis()
-# data_profiling1.plot_location_granularity_analysis()
-# data_profiling1.plot_law_code_granularity_analysis()
-# data_profiling1.plot_borough_granularity_analysis()
-# data_profiling1.plot_age_granularity_analysis()
-# data_profiling1.plot_race_granularity_analysis()
+data_profiling1.plot_date_granularity_analysis_classification()
+data_profiling1.plot_location_granularity_analysis_classification()
+data_profiling1.plot_law_code_granularity_analysis_classification()
+data_profiling1.plot_borough_granularity_analysis_classification()
+data_profiling1.plot_age_granularity_analysis_classification()
+data_profiling1.plot_race_granularity_analysis_classification()
 
 # Data Sparsity
-# data_profiling1.plot_sparsity_analysis()
-# data_profiling2.plot_sparsity_analysis()
-# data_profiling1.plot_sparsity_analysis_per_class()
-# data_profiling2.plot_sparsity_analysis_per_class()
+data_profiling1.plot_sparsity_analysis_classification()
+data_profiling2.plot_sparsity_analysis_classification()
+data_profiling1.plot_sparsity_analysis_per_class_classification()
+data_profiling2.plot_sparsity_analysis_per_class_classification()
 
 # Data Encoding of NY Arrests
-data_processing1.encode_variables()
+data_processing1.encode_variables_classification()
 # Save the encoded data
 data_loader1.data.to_csv("data/class_ny_arrests_encoded.csv", index=True)
 
 # Data Correlation
-# data_profiling1.plot_correlation_analysis()
-# data_profiling2.plot_correlation_analysis()
+data_profiling1.plot_correlation_analysis_classification()
+data_profiling2.plot_correlation_analysis_classification()
 
 # %% 2- Data Processing
 
 # Drop False Predictors
-data_processing1.drop_variables()
-data_processing2.drop_variables()
+data_processing1.drop_variables_classification()
+data_processing2.drop_variables_classification()
 
 # Save the data
 data_processing1.data_loader.data.to_csv("data/class_ny_arrests_drop.csv", index=False)
@@ -96,9 +96,9 @@ data_processing2.data_loader.data.to_csv("data/class_financial_distress_drop.csv
 # data_processing2.data_loader.data = pd.read_csv("data/class_financial_distress_drop.csv")
 
 # Handle Missing Values
-techniques1 = data_processing1.handle_missing_values()
+techniques1 = data_processing1.handle_missing_values_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Missing Values of the {data_loader1.file_tag} dataset is Missing Value Removal\n")
-data_processing1.apply_best_missing_value_approach('Remove MV', techniques1)
+data_processing1.apply_best_missing_value_approach_classification('Remove MV', techniques1)
 
 techniques2 = data_processing2.handle_missing_values()
 print(f"\nThe {data_loader2.file_tag} dataset doesnt have missing values\n")
@@ -134,15 +134,15 @@ y2_train.to_csv("data/class_financial_distress_ytrain_initial.csv", index=False)
 y2_test.to_csv("data/class_financial_distress_ytest_initial.csv", index=False)
 
 # Handle Outliers
-techniques1, df_train_dropped1, df_train_replaced1, df_train_truncated1 = data_processing1.handle_outliers()
+techniques1, df_train_dropped1, df_train_replaced1, df_train_truncated1 = data_processing1.handle_outliers_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Outliers of the {data_loader1.file_tag} dataset is to use Replace\n")
-data_processing1.apply_best_outliers_approach('Replace', techniques1,
+data_processing1.apply_best_outliers_approach_classification('Replace', techniques1,
                                               df_train_truncated1.drop(columns=[data_loader1.target]),
                                               df_train_truncated1[data_loader1.target])
 
-techniques2, df_train_dropped2, df_train_replaced2, df_train_truncated2 = data_processing2.handle_outliers()
+techniques2, df_train_dropped2, df_train_replaced2, df_train_truncated2 = data_processing2.handle_outliers_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Outliers of the {data_loader2.file_tag} dataset is to truncate them\n")
-data_processing2.apply_best_outliers_approach('Truncate', techniques2,
+data_processing2.apply_best_outliers_approach_classification('Truncate', techniques2,
                                               df_train_truncated2.drop(columns=[data_loader2.target]),
                                               df_train_truncated2[data_loader2.target])
 
@@ -164,15 +164,15 @@ y2_train.to_csv("data/class_financial_distress_ytrain_outliers.csv", index=False
 y2_test.to_csv("data/class_financial_distress_ytest_outliers.csv", index=False)
 
 # Handle Scaling
-techniques1, df_zscore_train1, df_zscore_test1, df_minmax_train1, df_minmax_test1 = data_processing1.handle_scaling()
+techniques1, df_zscore_train1, df_zscore_test1, df_minmax_train1, df_minmax_test1 = data_processing1.handle_scaling_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Scaling of the {data_loader1.file_tag} dataset is is to keep the original (no scaling)\n")
-data_processing1.apply_best_scaling_approach('Original', techniques1,
+data_processing1.apply_best_scaling_approach_classification('Original', techniques1,
                                              df_zscore_train1.drop(columns=[data_loader1.target]), df_zscore_train1[data_loader1.target],
                                              df_zscore_test1.drop(columns=[data_loader1.target]), df_zscore_test1[data_loader1.target])
 
-techniques2, df_zscore_train2, df_zscore_test2, df_minmax_train2, df_minmax_test2 = data_processing2.handle_scaling()
+techniques2, df_zscore_train2, df_zscore_test2, df_minmax_train2, df_minmax_test2 = data_processing2.handle_scaling_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Scaling of the {data_loader2.file_tag} dataset is to keep the original (no scaling)\n")
-data_processing2.apply_best_scaling_approach('Original', techniques2,
+data_processing2.apply_best_scaling_approach_classification('Original', techniques2,
                                              df_zscore_train2.drop(columns=[data_loader2.target]), df_zscore_train2[data_loader2.target],
                                              df_zscore_test2.drop(columns=[data_loader2.target]), df_zscore_test2[data_loader2.target])
 
@@ -194,13 +194,13 @@ y2_train.to_csv("data/class_financial_distress_ytrain_scaling.csv", index=True)
 y2_test.to_csv("data/class_financial_distress_ytest_scaling.csv", index=True)
 
 # Handle Balancing
-techniques1, df_under_X1, df_under_y1, df_over_X1, df_over_y1, smote_X1, smote_y1 = data_processing1.handle_balancing()
+techniques1, df_under_X1, df_under_y1, df_over_X1, df_over_y1, smote_X1, smote_y1 = data_processing1.handle_balancing_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader1.file_tag} dataset is SMOTE\n")
-data_processing1.apply_best_balancing_approach('Undersampling', techniques1, smote_X1, smote_y1)
+data_processing1.apply_best_balancing_approach_classification('Undersampling', techniques1, smote_X1, smote_y1)
 
-techniques2, df_under_X2, df_under_y2, df_over_X2, df_over_y2, smote_X2, smote_y2 = data_processing2.handle_balancing()
+techniques2, df_under_X2, df_under_y2, df_over_X2, df_over_y2, smote_X2, smote_y2 = data_processing2.handle_balancing_classification()
 print(f"\nFrom the plots we conclude that the best approach for the Balancing of the {data_loader2.file_tag} dataset is Undersampling\n")
-data_processing2.apply_best_balancing_approach('Undersampling', techniques2, df_under_X2, df_under_y2)
+data_processing2.apply_best_balancing_approach_classification('Undersampling', techniques2, df_under_X2, df_under_y2)
 
 # Save the data
 X1_train, X1_test, y1_train, y1_test = (data_processing1.X_train, data_processing1.X_test,
@@ -220,11 +220,11 @@ y2_train.to_csv("data/class_financial_distress_ytrain_balancing.csv", index=Fals
 y2_test.to_csv("data/class_financial_distress_ytest_balancing.csv", index=False)
 
 # Handle Feature Selection
-# data_processing1.handle_feature_selection()
+# data_processing1.handle_feature_selection_classification()
 vars_to_drop_1 = data_processing1.select_variables_to_drop()
 data_processing1.apply_feature_selection(vars_to_drop_1, file_tag="ny_arrests_feature_selection")
 
-# data_processing2.handle_feature_selection()
+# data_processing2.handle_feature_selection_classification()
 vars_to_drop_2 = data_processing2.select_variables_to_drop()
 data_processing2.apply_feature_selection(vars_to_drop_2, file_tag="financial_distress_feature_selection")
 
@@ -283,9 +283,9 @@ results_summary = {
 }
 
 # Naive Bayes
-evaluation_results_NB_dataset1 = data_modeling1.naive_bayes()
+evaluation_results_NB_dataset1 = data_modeling1.naive_bayes_classification()
 results_summary["NY Arrests"]["Naive Bayes"] = evaluation_results_NB_dataset1
-evaluation_results_NB_dataset2 = data_modeling2.naive_bayes()
+evaluation_results_NB_dataset2 = data_modeling2.naive_bayes_classification()
 results_summary["Financial Distress"]["Naive Bayes"] = evaluation_results_NB_dataset2
 
 print("NY Arrests Naive Bayes")
@@ -294,9 +294,9 @@ print("Financial Distress Naive Bayes")
 print(evaluation_results_NB_dataset2)
 
 # KNN
-evaluation_results_KNN_dataset1 = data_modeling1.knn()
+evaluation_results_KNN_dataset1 = data_modeling1.knn_classification()
 results_summary["NY Arrests"]["KNN"] = evaluation_results_KNN_dataset1
-evaluation_results_KNN_dataset2 = data_modeling2.knn()
+evaluation_results_KNN_dataset2 = data_modeling2.knn_classification()
 results_summary["Financial Distress"]["KNN"] = evaluation_results_KNN_dataset2
 
 print("NY Arrests KNN")
@@ -305,9 +305,9 @@ print("Financial Distress KNN")
 print(evaluation_results_KNN_dataset2)
 
 # Decision Tree
-evaluation_results_DT_dataset1 = data_modeling1.decision_tree()
+evaluation_results_DT_dataset1 = data_modeling1.decision_tree_classification()
 results_summary["NY Arrests"]["Decision Tree"] = evaluation_results_DT_dataset1
-evaluation_results_DT_dataset2 = data_modeling2.decision_tree()
+evaluation_results_DT_dataset2 = data_modeling2.decision_tree_classification()
 results_summary["Financial Distress"]["Decision Tree"] = evaluation_results_DT_dataset2
 
 print("NY Arrests Decision Tree")
@@ -316,9 +316,9 @@ print("Financial Distress Decision Tree")
 print(evaluation_results_DT_dataset2)
 
 # MLP
-evaluation_results_MLP_dataset1 = data_modeling1.mlp()
+evaluation_results_MLP_dataset1 = data_modeling1.mlp_classification()
 results_summary["NY Arrests"]["MLP"] = evaluation_results_MLP_dataset1
-evaluation_results_MLP_dataset2 = data_modeling2.mlp()
+evaluation_results_MLP_dataset2 = data_modeling2.mlp_classification()
 results_summary["Financial Distress"]["MLP"] = evaluation_results_MLP_dataset2
 
 print("NY Arrests MLP")
@@ -327,9 +327,9 @@ print("Financial Distress MLP")
 print(evaluation_results_MLP_dataset2)
 
 # Random Forests
-evaluation_results_RF_dataset1 = data_modeling1.random_forest()
+evaluation_results_RF_dataset1 = data_modeling1.random_forest_classification()
 results_summary["NY Arrests"]["Random Forest"] = evaluation_results_RF_dataset1
-evaluation_results_RF_dataset2 = data_modeling2.random_forest()
+evaluation_results_RF_dataset2 = data_modeling2.random_forest_classification()
 results_summary["Financial Distress"]["Random Forest"] = evaluation_results_RF_dataset2
 
 print("NY Arrests Random Forest")
@@ -338,9 +338,9 @@ print("Financial Distress Random Forest")
 print(evaluation_results_RF_dataset2)
 
 # Gradient Boosting
-evaluation_results_GB_dataset1 = data_modeling1.gradient_boosting()
+evaluation_results_GB_dataset1 = data_modeling1.gradient_boosting_classification()
 results_summary["NY Arrests"]["Gradient Boosting"] = evaluation_results_GB_dataset1
-evaluation_results_GB_dataset2 = data_modeling2.gradient_boosting()
+evaluation_results_GB_dataset2 = data_modeling2.gradient_boosting_classification()
 results_summary["Financial Distress"]["Gradient Boosting"] = evaluation_results_GB_dataset2
 
 print("NY Arrests Gradient Boosting")

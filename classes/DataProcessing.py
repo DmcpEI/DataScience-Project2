@@ -1,20 +1,26 @@
 from math import ceil, log10
 
 import numpy as np
+from numpy import arange
 import pandas as pd
-from matplotlib import pyplot as plt
 from pandas import read_csv, DataFrame, Series, Index
+from matplotlib import pyplot as plt
 from matplotlib.pyplot import subplots, show, savefig, figure
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, mean_absolute_percentage_error
+from imblearn.over_sampling import SMOTE
 
 from dslabs_functions import determine_outlier_thresholds_for_var, run_NB, run_KNN, CLASS_EVAL_METRICS, \
-    plot_multibar_chart, get_variable_types, concat, plot_multiline_chart, HEIGHT
-from imblearn.over_sampling import SMOTE
-from numpy import ndarray
+    plot_multibar_chart, get_variable_types, concat, plot_multiline_chart, HEIGHT, plot_forecasting_eval, \
+    series_train_test_split, plot_forecasting_series, plot_line_chart, ts_aggregation_by, \
+    dataframe_temporal_train_test_split
 
 
 class DataProcessing:
@@ -28,7 +34,7 @@ class DataProcessing:
         self.y_train = DataFrame()
         self.y_test = DataFrame()
 
-    def pre_encode_variables(self):
+    def pre_encode_variables_classification(self):
 
         # Encode AGE_GROUP
         print("Encoding AGE_GROUP...")
@@ -88,7 +94,7 @@ class DataProcessing:
         # Drop unnecessary columns
         self.data_loader.data = self.data_loader.data.drop(columns=['prefix', 'suffix', 'prefix_encoded', 'suffix_encoded', 'combined_encoded'])
 
-    def encode_variables(self):
+    def encode_variables_classification(self):
         """
         Encodes all symbolic variables in the dataset based on the granularity analysis.
         """
@@ -181,7 +187,7 @@ class DataProcessing:
 
         print("All symbolic variables encoded.")
 
-    def drop_variables(self):
+    def drop_variables_classification(self):
         """
         Drop variables that are false predictions or irrelevant
         """
@@ -195,7 +201,7 @@ class DataProcessing:
             self.data_loader.data.drop(columns=['Financial Distress'], inplace=True)
             print("\nDropped 'Financial Distress' variable for being a false predictor.")
 
-    def evaluate_step(self, X_train, X_test, y_train, y_test, dataset, file_tag, metric="accuracy", plot_title="Model Evaluation", is_scalling = False):
+    def evaluate_step_classification(self, X_train, X_test, y_train, y_test, dataset, file_tag, metric="accuracy", plot_title="Model Evaluation", is_scalling = False):
         """
         Evaluates the model's performance on a given dataset and generates a comparison plot.
 
@@ -249,7 +255,7 @@ class DataProcessing:
 
             return eval_results
 
-    def handle_missing_values(self):
+    def handle_missing_values_classification(self):
         """
         Handles missing values using different techniques and selects the best-performing one.
         The evaluated techniques are:
@@ -284,7 +290,7 @@ class DataProcessing:
             X_test_removed = X_test.dropna()
             y_test_removed = y_test[X_test_removed.index]
 
-            techniques['Remove MV'] = self.evaluate_step(
+            techniques['Remove MV'] = self.evaluate_step_classification(
                 X_train_removed, X_test_removed, y_train_removed, y_test_removed,
                 self.data_loader.file_tag, "MV_Row_Removal",
                 plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Row Removal"
@@ -307,7 +313,7 @@ class DataProcessing:
             X_train_mean[symbolic_columns] = imputer_most_frequent.fit_transform(X_train[symbolic_columns])
             X_test_mean[symbolic_columns] = imputer_most_frequent.transform(X_test[symbolic_columns])
 
-        techniques['Mean & Most Frequent'] = self.evaluate_step(
+        techniques['Mean & Most Frequent'] = self.evaluate_step_classification(
             X_train_mean, X_test_mean, y_train, y_test,
             self.data_loader.file_tag, "MV_Mean_Most_Frequent_Imputation",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Mean & Most Frequent Imputation"
@@ -325,7 +331,7 @@ class DataProcessing:
             X_train_median[symbolic_columns] = imputer_most_frequent.fit_transform(X_train[symbolic_columns])
             X_test_median[symbolic_columns] = imputer_most_frequent.transform(X_test[symbolic_columns])
 
-        techniques['Median & Most Frequent'] = self.evaluate_step(
+        techniques['Median & Most Frequent'] = self.evaluate_step_classification(
             X_train_median, X_test_median, y_train, y_test,
             self.data_loader.file_tag, "MV_Median_Most_Frequent_Imputation",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - MV Median & Most Frequent Imputation"
@@ -338,7 +344,7 @@ class DataProcessing:
 
         return techniques
 
-    def apply_best_missing_value_approach(self, best_technique, techniques):
+    def apply_best_missing_value_approach_classification(self, best_technique, techniques):
         """
         Applies the best missing value handling technique to the dataset.
         """
@@ -378,7 +384,7 @@ class DataProcessing:
 
         self.previous_accuracy = techniques[best_technique]
 
-    def handle_outliers(self):
+    def handle_outliers_classification(self):
         """
         Handles outliers using different techniques and selects the best-performing one.
         The evaluated techniques are:
@@ -413,7 +419,7 @@ class DataProcessing:
             outliers = df_train_dropped[(df_train_dropped[var] > top) | (df_train_dropped[var] < bottom)]
             df_train_dropped.drop(outliers.index, axis=0, inplace=True)
 
-        results_drop = self.evaluate_step(df_train_dropped.drop(columns=[self.target]), self.X_test,
+        results_drop = self.evaluate_step_classification(df_train_dropped.drop(columns=[self.target]), self.X_test,
                                           df_train_dropped[self.target], self.y_test, self.data_loader.file_tag,
                                           "Outlier_Drop", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Drop")
         print("Train data shape after dropping outliers:", df_train_dropped.shape)
@@ -427,7 +433,7 @@ class DataProcessing:
             median = df_train_replaced[var].median()
             df_train_replaced[var] = df_train_replaced[var].apply(lambda x: median if x > top or x < bottom else x)
 
-        results_replace = self.evaluate_step(df_train_replaced.drop(columns=[self.target]), self.X_test,
+        results_replace = self.evaluate_step_classification(df_train_replaced.drop(columns=[self.target]), self.X_test,
                                              df_train_replaced[self.target], self.y_test, self.data_loader.file_tag,
                                              "Outlier_Replace", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Replace")
         print("Train data shape after replacing outliers:", df_train_replaced.shape)
@@ -441,7 +447,7 @@ class DataProcessing:
             top, bottom = determine_outlier_thresholds_for_var(summary[var], threshold=5)
             df_train_truncated[var] = df_train_truncated[var].apply(lambda x: top if x > top else (bottom if x < bottom else x))
 
-        results_truncate = self.evaluate_step(df_train_truncated.drop(columns=[self.target]), self.X_test,
+        results_truncate = self.evaluate_step_classification(df_train_truncated.drop(columns=[self.target]), self.X_test,
                                               df_train_truncated[self.target], self.y_test, self.data_loader.file_tag,
                                               "Outlier_Truncate", plot_title=f"Evaluation for {self.data_loader.file_tag} - Outlier Truncate")
         print("Train data shape after replacing outliers:", df_train_truncated.shape)
@@ -455,7 +461,7 @@ class DataProcessing:
 
         return techniques, df_train_dropped, df_train_replaced, df_train_truncated
 
-    def apply_best_outliers_approach(self, best_technique, techniques, X_train = None, y_train = None):
+    def apply_best_outliers_approach_classification(self, best_technique, techniques, X_train = None, y_train = None):
 
         numeric_vars = self.X_train.select_dtypes(include=['float64', 'int64']).columns.tolist()
 
@@ -472,7 +478,7 @@ class DataProcessing:
 
         self.previous_accuracy = techniques[best_technique]
 
-    def handle_scaling(self):
+    def handle_scaling_classification(self):
         """
         Handles scaling using different techniques and selects the best-performing one.
         The evaluated techniques are:
@@ -511,7 +517,7 @@ class DataProcessing:
         df_zscore_test[self.target] = target_data_test
 
         # Evaluate the performance of the Standard Scaler
-        results_standard = self.evaluate_step(
+        results_standard = self.evaluate_step_classification(
             df_zscore_train.drop(columns=[self.target]),
             df_zscore_test.drop(columns=[self.target]),
             df_zscore_train[self.target],
@@ -539,7 +545,7 @@ class DataProcessing:
         df_minmax_test[self.target] = target_data_test
 
         # Evaluate the performance of the MinMax Scaler
-        results_minmax = self.evaluate_step(
+        results_minmax = self.evaluate_step_classification(
             df_minmax_train.drop(columns=[self.target]),
             df_minmax_test.drop(columns=[self.target]),
             df_minmax_train[self.target],
@@ -557,7 +563,7 @@ class DataProcessing:
 
         return techniques, df_zscore_train, df_zscore_test, df_minmax_train, df_minmax_test
 
-    def apply_best_scaling_approach(self, best_technique, techniques, X_train = None, y_train = None, X_test = None, y_test = None):
+    def apply_best_scaling_approach_classification(self, best_technique, techniques, X_train = None, y_train = None, X_test = None, y_test = None):
         """
         Applies the best scaling technique to the dataset.
         """
@@ -572,7 +578,7 @@ class DataProcessing:
 
         self.previous_accuracy = techniques[best_technique]
 
-    def handle_balancing(self):
+    def handle_balancing_classification(self):
         """
         Handles class imbalance using undersampling, oversampling, and SMOTE techniques,
         and evaluates the performance of each.
@@ -593,7 +599,7 @@ class DataProcessing:
         negatives = self.X_train[self.y_train == negative_class].sample(len(positives), random_state=42)
         X_train_under = pd.concat([positives, negatives])
         y_train_under = pd.concat([self.y_train[positives.index], self.y_train[negatives.index]])
-        techniques["Undersampling"] = self.evaluate_step(
+        techniques["Undersampling"] = self.evaluate_step_classification(
             X_train_under, self.X_test, y_train_under, self.y_test, self.data_loader.file_tag,
             "Balancing_Undersampling",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - Undersampling"
@@ -604,7 +610,7 @@ class DataProcessing:
         positives = self.X_train[self.y_train == positive_class].sample(len(negatives), replace=True, random_state=42)
         X_train_over = pd.concat([positives, negatives])
         y_train_over = pd.concat([self.y_train[positives.index], self.y_train[negatives.index]])
-        techniques["Oversampling"] = self.evaluate_step(
+        techniques["Oversampling"] = self.evaluate_step_classification(
             X_train_over, self.X_test, y_train_over, self.y_test, self.data_loader.file_tag,
             "Balancing_Oversampling",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - Oversampling"
@@ -613,7 +619,7 @@ class DataProcessing:
         # SMOTE
         smote = SMOTE(sampling_strategy="minority", random_state=42)
         X_train_smote, y_train_smote = smote.fit_resample(self.X_train, self.y_train)
-        techniques["SMOTE"] = self.evaluate_step(
+        techniques["SMOTE"] = self.evaluate_step_classification(
             X_train_smote, self.X_test, y_train_smote, self.y_test, self.data_loader.file_tag,
             "Balancing_SMOTE",
             plot_title=f"Evaluation for {self.data_loader.file_tag} - SMOTE"
@@ -626,7 +632,7 @@ class DataProcessing:
 
         return techniques, X_train_under, y_train_under, X_train_over, y_train_over, X_train_smote, y_train_smote
 
-    def apply_best_balancing_approach(self, best_technique, techniques, X_train = None, y_train = None):
+    def apply_best_balancing_approach_classification(self, best_technique, techniques, X_train = None, y_train = None):
         """
         Applies the best balancing technique to the dataset.
         """
@@ -639,7 +645,7 @@ class DataProcessing:
 
         self.previous_accuracy = techniques[best_technique]
 
-    def handle_feature_selection(self):
+    def handle_feature_selection_classification(self):
         print(f"\n\nHandling feature selection for the {self.data_loader.file_tag} dataset...\n")
 
         if self.target == "JURISDICTION_CODE":
@@ -723,7 +729,7 @@ class DataProcessing:
             X_test_processed: DataFrame = X_test.drop(vars2drop, axis=1, inplace=False)
 
             # Evaluate the model performance with the selected variables
-            eval: dict[str, list] | None = self.evaluate_step(
+            eval: dict[str, list] | None = self.evaluate_step_classification(
                 X_train_processed, X_test_processed, y_train, y_test,
                 dataset=self.data_loader.file_tag, file_tag=f"{file_tag}_low_var_{thresh}",
                 metric=metric, plot_title=f"Evaluation for {self.data_loader.file_tag} - Low Variance ({thresh})"
@@ -834,7 +840,7 @@ class DataProcessing:
             X_test_processed: DataFrame = X_test.drop(vars2drop, axis=1, inplace=False)
 
             # Evaluate the model performance with the selected variables
-            eval: dict[str, list] | None = self.evaluate_step(
+            eval: dict[str, list] | None = self.evaluate_step_classification(
                 X_train_processed, X_test_processed, y_train, y_test,
                 dataset=self.data_loader.file_tag, file_tag=f"{file_tag}_low_var_{thresh}",
                 metric=metric, plot_title=f"Evaluation for {self.data_loader.file_tag} - Redundancy ({thresh})"
@@ -862,3 +868,604 @@ class DataProcessing:
         )
         savefig(f"graphs/classification/data_preparation/{file_tag}_fs_redundancy_{metric}_study.png")
         show()
+
+    # %% Forecasting
+
+    def evaluate_step_forecasting(self, X_train, X_test, y_train, y_test, file_tag):
+        try:
+            # Initialize the Linear Regression model
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+
+            # Generate predictions
+            y_pred_train = model.predict(X_train)
+            y_pred_test = model.predict(X_test)
+
+            # Validate predictions
+            prd_trn = Series(y_pred_train, index=y_train.index)
+            prd_tst = Series(y_pred_test, index=y_test.index)
+
+            # Calculate evaluation metrics
+            eval_results = {
+                'RMSE_Train': np.sqrt(mean_squared_error(y_train, y_pred_train)),
+                'RMSE_Test': np.sqrt(mean_squared_error(y_test, y_pred_test)),
+                'MAE_Train': mean_absolute_error(y_train, y_pred_train),
+                'MAE_Test': mean_absolute_error(y_test, y_pred_test),
+                'MAPE_Train': mean_absolute_percentage_error(y_train, y_pred_train),
+                'MAPE_Test': mean_absolute_percentage_error(y_test, y_pred_test),
+                'R2_Train': r2_score(y_train, y_pred_train),
+                'R2_Test': r2_score(y_test, y_pred_test),
+            }
+
+            # Debugging Logs
+            print(f"Evaluation Results: {eval_results}")
+
+            # Plot and save results
+            plot_forecasting_eval(y_train, y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - {file_tag}")
+            plt.savefig(
+                f"graphs/forecasting/data_preparation/{self.data_loader.file_tag}_{file_tag}_linear_regression_eval.png")
+            plt.show()
+
+            plot_forecasting_series(
+                y_train,
+                y_test,
+                prd_tst,
+                title=f"{self.data_loader.file_tag} - {file_tag}",
+                xlabel=self.data_loader.read_options["index_col"],
+                ylabel=self.data_loader.target,
+            )
+            plt.savefig(
+                f"graphs/forecasting/data_preparation/{self.data_loader.file_tag}_{file_tag}_linear_regression_forecast.png")
+            plt.show()
+
+            return eval_results
+
+        except Exception as e:
+            print(f"Error during evaluation: {e}")
+            raise
+
+    def handle_missing_values_forecasting(self):
+        print(f"\n\nHandling missing values for the {self.data_loader.file_tag} dataset...")
+
+        # Categorize variables (if needed)
+        variable_types = get_variable_types(self.data_loader.data)
+        numeric_columns = variable_types["numeric"]
+
+        # Prepare training and testing features/targets
+        train, test = series_train_test_split(self.data_loader.data, trn_pct=0.90)
+        X_train = arange(len(train)).reshape(-1, 1)
+        X_test = arange(len(train), len(self.data_loader.data)).reshape(-1, 1)
+        y_train = train.to_numpy()
+        y_test = test.to_numpy()
+
+        # Dictionary to store results for different techniques
+        techniques = {}
+
+        ### Mean Imputation ###
+        imputer_mean_numeric = SimpleImputer(strategy='mean')
+
+        X_train_mean = X_train.copy()
+        X_test_mean = X_test.copy()
+
+        # Apply imputation on numeric columns
+        if numeric_columns:
+            X_train_mean = imputer_mean_numeric.fit_transform(X_train)
+            X_test_mean = imputer_mean_numeric.transform(X_test)
+
+        # Evaluate after mean imputation
+        techniques['Mean'] = self.evaluate_step_forecasting(
+            X_train_mean, X_test_mean, y_train, y_test, file_tag="MV_Mean_Imputation"
+        )
+
+        ### Median Imputation ###
+        imputer_median_numeric = SimpleImputer(strategy='median')
+
+        X_train_median = X_train.copy()
+        X_test_median = X_test.copy()
+
+        # Apply imputation on numeric columns
+        if numeric_columns:
+            X_train_median = imputer_median_numeric.fit_transform(X_train)
+            X_test_median = imputer_median_numeric.transform(X_test)
+
+        # Evaluate after median imputation
+        techniques['Median'] = self.evaluate_step_forecasting(
+            X_train_median, X_test_median, y_train, y_test, file_tag="MV_Median_Imputation"
+        )
+
+        # Print techniques results
+        print("\nTechniques applied and their results:")
+        for technique, results in techniques.items():
+            print(f"{technique}: {results}")
+
+        return techniques
+
+    def apply_best_missing_value_approach_forecasting(self, best_technique, techniques):
+        """
+        Applies the best missing value handling technique to the dataset for forecasting.
+        """
+        print(f"Applying the best missing value handling approach: {best_technique}")
+
+        # Apply Mean Imputation
+        if best_technique == 'Mean':
+            imputer_mean_numeric = SimpleImputer(strategy='mean')
+
+            numeric_columns = get_variable_types(self.data_loader.data.drop(columns=[self.data_loader.target]))[
+                "numeric"]
+
+            if numeric_columns:
+                self.data_loader.data[numeric_columns] = imputer_mean_numeric.fit_transform(
+                    self.data_loader.data[numeric_columns])
+
+        # Apply Median Imputation
+        elif best_technique == 'Median':
+            imputer_median_numeric = SimpleImputer(strategy='median')
+
+            numeric_columns = get_variable_types(self.data_loader.data.drop(columns=[self.data_loader.target]))[
+                "numeric"]
+
+            if numeric_columns:
+                self.data_loader.data[numeric_columns] = imputer_median_numeric.fit_transform(
+                    self.data_loader.data[numeric_columns])
+
+        # Store the performance of the best technique for reference
+        self.previous_performance = techniques[best_technique]
+
+    def _scale_all_dataframe(self, data: DataFrame) -> DataFrame:
+        vars: list[str] = data.columns.to_list()
+        transf: StandardScaler = StandardScaler().fit(data)
+        df = DataFrame(transf.transform(data), index=data.index)
+        df.columns = vars
+        return df
+
+    def handle_scaling_forecasting(self):
+
+        print(f"\n\nHandling scaling for the {self.data_loader.file_tag} dataset...")
+
+        # Dictionary to store results for different techniques
+        techniques = {}
+
+        # Prepare training and testing features/targets
+        train, test = dataframe_temporal_train_test_split(self.data_loader.data, trn_pct=0.90)
+        X_train = train.drop(self.data_loader.target, axis=1)
+        y_train = train[self.data_loader.target]
+        X_test = test.drop(self.data_loader.target, axis=1)
+        y_test = test[self.data_loader.target]
+
+        # Original Dataset (Baseline)
+        techniques['Original'] = self.evaluate_step_forecasting(
+            X_train, X_test, y_train, y_test, file_tag="Scaling_Original"
+        )
+
+        series: Series = self.data_loader.data[self.data_loader.target]
+
+        figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+        plot_line_chart(
+            series.index.to_list(),
+            series.to_list(),
+            xlabel=series.index.name,
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} original {self.data_loader.target}",
+        )
+        show()
+
+        df: DataFrame = self._scale_all_dataframe(self.data_loader.data)
+        ss: Series = df[self.data_loader.target]
+
+        figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+        plot_line_chart(
+            ss.index.to_list(),
+            ss.to_list(),
+            xlabel=ss.index.name,
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} {self.data_loader.target} after scaling",
+        )
+        show()
+
+        # Prepare training and testing features/targets
+        train, test = dataframe_temporal_train_test_split(df, trn_pct=0.90)
+        X_train = train.drop(self.data_loader.target, axis=1)
+        y_train = train[self.data_loader.target]
+        X_test = test.drop(self.data_loader.target, axis=1)
+        y_test = test[self.data_loader.target]
+
+        # Evaluate after mean and most frequent imputation
+        techniques['Scaled'] = self.evaluate_step_forecasting(
+            X_train, X_test, y_train, y_test, file_tag="Scaling"
+        )
+
+        # Print techniques results
+        print("\nTechniques applied and their results:")
+        for technique, results in techniques.items():
+            print(f"{technique}: {results}")
+
+        return techniques
+
+    def apply_best_scaling_approach_forecasting(self, best_technique, techniques):
+
+        print(f"Applying the best approach: {best_technique}")
+
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        else:
+            print(f"Applying Scaling...")
+            self.data_loader.data = self._scale_all_dataframe(self.data_loader.data)
+
+        self.previous_accuracy = techniques[best_technique]
+
+    def ts_aggregation_by(
+            self,
+            data: Series | DataFrame,
+            gran_level: str = "D",  # Default to daily
+    ) -> Series | DataFrame:
+        df = data.copy()
+
+        # Determine aggregation function based on dataset type
+        agg_func = "sum" if self.data_loader.file_tag == "forecast_ny_arrests" else "mean"
+
+        # Check if input is a Series
+        is_series = isinstance(df, Series)
+        if is_series:
+            df = df.to_frame(name="value")  # Convert Series to DataFrame for processing
+
+        if gran_level in ["D", "M", "Y", "Q", "W"]:
+            # Standard pandas frequency aliases
+            index = df.index.to_period(gran_level)
+            df = df.groupby(by=index).agg(agg_func)
+            df.index = df.index.to_timestamp()  # Convert back to timestamp
+        elif gran_level == "five_years":
+            # Custom logic for five years
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+            df["five_years"] = (df.index.year // 5) * 5
+            df = df.groupby("five_years").agg(agg_func)
+            df.index = pd.to_datetime(df.index, format="%Y")  # Convert five years to timestamp
+        elif gran_level == "decade":
+            # Custom logic for decades
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+            df["decade"] = (df.index.year // 10) * 10
+            df = df.groupby("decade").agg(agg_func)
+            df.index = pd.to_datetime(df.index, format="%Y")  # Convert decade to timestamp
+        else:
+            raise ValueError(f"Unsupported granularity level: {gran_level}")
+
+        # Convert back to Series if input was a Series
+        if is_series:
+            df = df.squeeze()  # Convert single-column DataFrame to Series
+
+        return df
+
+    def handle_aggregation_forecasting(self):
+        """
+        Handles aggregation for different datasets and evaluates each approach.
+        """
+        print(f"\n\nHandling aggregation for the {self.data_loader.file_tag} dataset...")
+
+        # Dictionary to store results for different techniques
+        techniques = {}
+
+        # Aggregation Levels Based on Dataset Type
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            gran_levels = [("M", "monthly"), ("Y", "yearly")]
+            original_level = "daily"
+        elif self.data_loader.file_tag == "forecast_gdp_europe":
+            gran_levels = [("five_years", "five_years"), ("decade", "decade")]
+            original_level = "yearly"
+        else:
+            raise ValueError(f"Unsupported dataset")
+
+        # Extract the target series
+        series: Series = self.data_loader.data[self.data_loader.target]
+        figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+        plot_line_chart(
+            series.index.to_list(),
+            series.to_list(),
+            xlabel=series.index.name,
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} {original_level} {self.data_loader.target}",
+        )
+
+        # Original Dataset (Baseline)
+        techniques["Original"] = self.previous_accuracy
+
+        for gran_level, gran_name in gran_levels:
+            try:
+                print(f"\nTesting aggregation at {gran_name} level for {self.data_loader.file_tag}...")
+
+                # Perform aggregation
+                ss_agg: Series = self.ts_aggregation_by(series, gran_level=gran_level)
+
+                # Visualize aggregated data
+                figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+                plot_line_chart(
+                    ss_agg.index.to_list(),
+                    ss_agg.to_list(),
+                    xlabel=ss_agg.index.name,
+                    ylabel=self.data_loader.target,
+                    title=f"{self.data_loader.file_tag} {gran_name} {self.data_loader.target}",
+                )
+                savefig(f"graphs/forecasting/data_preparation/{self.data_loader.file_tag}_{gran_name}_aggregation.png")
+
+                # Aggregate dataset
+                agg_data = self.ts_aggregation_by(self.data_loader.data, gran_level=gran_level)
+
+                # Prepare training and testing features/targets
+                train, test = dataframe_temporal_train_test_split(agg_data, trn_pct=0.90)
+                X_train = train.drop(self.data_loader.target, axis=1)
+                y_train = train[self.data_loader.target]
+                X_test = test.drop(self.data_loader.target, axis=1)
+                y_test = test[self.data_loader.target]
+
+                # Evaluate the aggregated approach
+                techniques[gran_name] = self.evaluate_step_forecasting(
+                    X_train, X_test, y_train, y_test, file_tag=f"{gran_name}_Aggregation"
+                )
+
+            except Exception as e:
+                print(f"Error during aggregation ({gran_name}): {e}")
+
+        # Display the results of all techniques
+        print("\nTechniques applied and their results:")
+        for technique, results in techniques.items():
+            print(f"{technique}: {results}")
+
+        return techniques
+
+    def apply_best_aggregation_approach_forecasting(self, best_technique, techniques):
+
+        print(f"Applying the best approach: {best_technique}")
+
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        else:
+            print(f"Applying Aggregation...")
+
+            if best_technique == "monthly":
+                self.data_loader.data = self.ts_aggregation_by(self.data_loader.data, gran_level="M")
+
+            elif best_technique == "yearly":
+                self.data_loader.data = self.ts_aggregation_by(self.data_loader.data, gran_level="Y")
+
+            elif best_technique == "five_years":
+                self.data_loader.data = self.ts_aggregation_by(self.data_loader.data, gran_level="five_years")
+
+            elif best_technique == "decade":
+                self.data_loader.data = self.ts_aggregation_by(self.data_loader.data, gran_level="decade")
+
+        self.previous_accuracy = techniques[best_technique]
+
+    def handle_smoothing_forecasting(self, train, X_train, X_test, y_train, y_test):
+        """
+        Handles smoothing techniques for forecasting. Evaluates each smoothing approach
+        for every defined window size and compares them. Returns aligned X_train and y_train for each smoothing size.
+        """
+        print(f"\n\nHandling smoothing for the {self.data_loader.file_tag} dataset...")
+
+        # Dictionary to store results for different techniques
+        techniques = {}
+        smooth_data = {}  # To store aligned X_train and y_train for each smoothing size
+
+        # Original Dataset (Baseline)
+        techniques["Original"] = self.previous_accuracy
+
+        # Define smoothing window sizes based on the dataset
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            sizes = [10, 25, 50, 75, 100]
+        elif self.data_loader.file_tag == "forecast_gdp_europe":
+            sizes = [5, 10, 20, 35, 50]
+        else:
+            raise ValueError(f"Unsupported dataset type: {self.data_loader.file_tag}")
+
+        # Visualize original training data
+        figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+        plot_line_chart(
+            train.index.to_list(),  # If train.index is the desired index
+            train[self.data_loader.target].tolist(),  # Convert target column to list
+            xlabel=train.index.name,
+            ylabel=self.data_loader.target,
+            title=f"{self.data_loader.file_tag} Original Training Data",
+        )
+        show()
+
+        for size in sizes:
+            print(f"\nTesting smoothing with window size={size} for {self.data_loader.file_tag}...")
+
+            # Apply smoothing to y_train
+            smoothed_y_train = y_train.rolling(window=size).mean()
+
+            # Visualize smoothed training target
+            figure(figsize=(3 * HEIGHT, HEIGHT / 2))
+            plot_line_chart(
+                smoothed_y_train.index.to_list(),
+                smoothed_y_train.tolist(),
+                xlabel=smoothed_y_train.index.name,
+                ylabel=self.data_loader.target,
+                title=f"{self.data_loader.file_tag} Smoothed Training Target (Window Size={size})",
+            )
+            show()
+
+            # Drop NaN values caused by rolling smoothing
+            smoothed_y_train = smoothed_y_train.dropna()
+
+            # Align X_train with the smoothed target
+            aligned_X_train = X_train.loc[smoothed_y_train.index]
+
+            # Store aligned data
+            smooth_data[f"Window_{size}"] = {
+                "X_train": aligned_X_train,
+                "y_train": smoothed_y_train,
+            }
+
+            # Evaluate the smoothed approach
+            techniques[f"Smoothing_size={size}"] = self.evaluate_step_forecasting(
+                aligned_X_train, X_test, smoothed_y_train, y_test, file_tag=f"Smoothing_{size}",
+            )
+
+        # Display results of all techniques
+        print("\nTechniques applied and their results:")
+        for technique, results in techniques.items():
+            print(f"{technique}: {results}")
+
+        return techniques, smooth_data
+
+    def apply_best_smoothing_approach_forecasting(self, best_technique, techniques, smooth_data):
+        """
+        Applies the best smoothing technique to the dataset for forecasting using the aligned data.
+        """
+        print(f"Applying the best smoothing approach: {best_technique}")
+
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        else:
+            # Extract the aligned data for the best smoothing technique
+            if best_technique in smooth_data:
+                best_smooth_X_train = smooth_data[best_technique]["X_train"]
+                best_smooth_y_train = smooth_data[best_technique]["y_train"]
+
+                print(f"Best smoothing technique {best_technique} applied.")
+                print(f"Aligned X_train shape: {best_smooth_X_train.shape}")
+                print(f"Aligned y_train shape: {best_smooth_y_train.shape}")
+
+                # Update the dataset with the aligned data
+                self.X_train = best_smooth_X_train
+                self.y_train = best_smooth_y_train
+
+            else:
+                raise ValueError(f"Best technique '{best_technique}' not found in aligned_data.")
+
+        # Update the previous accuracy with the results of the best technique
+        self.previous_accuracy = techniques[best_technique]
+
+    def handle_differentiation_forecasting(self, X_train, X_test, y_train, y_test):
+        """
+        Handles differentiation techniques (first and second derivatives) for forecasting.
+        Evaluates each technique and compares them with the original dataset.
+        """
+        print(f"\n\nHandling differentiation for the {self.data_loader.file_tag} dataset...")
+
+        # Dictionary to store results for different techniques
+        techniques = {}
+
+        # Dictionary to store aligned data for different techniques
+        differentiated_data = {}
+
+        # Original Dataset (Baseline)
+        techniques['Original'] = self.previous_accuracy
+        differentiated_data['Original'] = {
+            "X_train": X_train,
+            "y_train": y_train,
+            "X_test": X_test,
+            "y_test": y_test
+        }
+
+        # First Derivative
+        print(f"\nTesting the first derivative for {self.data_loader.file_tag}...")
+        y_train_diff = y_train.diff().dropna()
+        y_test_diff = y_test.diff().dropna()
+
+        # Visualize the first derivative
+        figure(figsize=(3 * HEIGHT, HEIGHT))
+        plot_line_chart(
+            y_train_diff.index, y_train_diff.values,
+            title=f"{self.data_loader.file_tag} - First Derivative (Training)",
+            xlabel="Index",
+            ylabel=f"Δ {self.data_loader.target}",
+        )
+        savefig(f"graphs/forecasting/data_preparation/{self.data_loader.file_tag}_first_derivative_training.png")
+        show()
+
+        # Align X_train and X_test with y_train_diff and y_test_diff
+        aligned_X_train_diff = X_train[len(X_train) - len(y_train_diff):]
+        aligned_X_test_diff = X_test[len(X_test) - len(y_test_diff):]
+
+        # Store aligned data for the first derivative
+        differentiated_data['First Derivative'] = {
+            "X_train": aligned_X_train_diff,
+            "y_train": y_train_diff,
+            "X_test": aligned_X_test_diff,
+            "y_test": y_test_diff
+        }
+
+        # Evaluate the first derivative approach
+        techniques['First Derivative'] = self.evaluate_step_forecasting(
+            aligned_X_train_diff,
+            aligned_X_test_diff,
+            y_train_diff,
+            y_test_diff,
+            file_tag="First_Derivative"
+        )
+
+        # Second Derivative
+        print(f"\nTesting the second derivative for {self.data_loader.file_tag}...")
+        y_train_diff2 = y_train.diff().diff().dropna()
+        y_test_diff2 = y_test.diff().diff().dropna()
+
+        # Visualize the second derivative
+        figure(figsize=(3 * HEIGHT, HEIGHT))
+        plot_line_chart(
+            y_train_diff2.index, y_train_diff2.values,
+            title=f"{self.data_loader.file_tag} - Second Derivative (Training)",
+            xlabel="Index",
+            ylabel=f"Δ² {self.data_loader.target}",
+        )
+        savefig(f"graphs/forecasting/data_preparation/{self.data_loader.file_tag}_second_derivative_training.png")
+        show()
+
+        # Align X_train and X_test with y_train_diff2 and y_test_diff2
+        aligned_X_train_diff2 = X_train[len(X_train) - len(y_train_diff2):]
+        aligned_X_test_diff2 = X_test[len(X_test) - len(y_test_diff2):]
+
+        # Store aligned data for the second derivative
+        differentiated_data['Second Derivative'] = {
+            "X_train": aligned_X_train_diff2,
+            "y_train": y_train_diff2,
+            "X_test": aligned_X_test_diff2,
+            "y_test": y_test_diff2
+        }
+
+        # Evaluate the second derivative approach
+        techniques['Second Derivative'] = self.evaluate_step_forecasting(
+            aligned_X_train_diff2,
+            aligned_X_test_diff2,
+            y_train_diff2,
+            y_test_diff2,
+            file_tag="Second_Derivative"
+        )
+
+        # Display the results of all techniques
+        print("\nTechniques applied and their results:")
+        for technique, results in techniques.items():
+            print(f"{technique}: {results}")
+
+        return techniques, differentiated_data
+
+    def apply_best_differentiation_approach_forecasting(self, best_technique, techniques, differentiated_data):
+        """
+        Applies the best differentiation technique to the dataset for forecasting using the aligned data.
+        """
+        print(f"Applying the best differentiation approach: {best_technique}")
+
+        if best_technique == 'Original':
+            print("No changes made to the dataset (original data retained).")
+        else:
+            # Extract the aligned data for the best differentiation technique
+            if best_technique in differentiated_data:
+                best_differentiated_X_train = differentiated_data[best_technique]["X_train"]
+                best_differentiated_y_train = differentiated_data[best_technique]["y_train"]
+                best_differentiated_X_test = differentiated_data[best_technique]["X_test"]
+                best_differentiated_y_test = differentiated_data[best_technique]["y_test"]
+
+                print(f"Best differentiation technique {best_technique} applied.")
+
+                # Update the dataset with the aligned data
+                self.X_train = best_differentiated_X_train
+                self.y_train = best_differentiated_y_train
+                self.X_test = best_differentiated_X_test
+                self.y_test = best_differentiated_y_test
+
+            else:
+                raise ValueError(f"Best technique '{best_technique}' not found in aligned_data.")
+
+        # Update the previous accuracy with the results of the best technique
+        self.previous_accuracy = techniques[best_technique]

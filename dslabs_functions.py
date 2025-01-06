@@ -834,9 +834,9 @@ def ts_aggregation_by(
     return df
 
 
-def series_train_test_split(data: Series, trn_pct: float = 0.90) -> tuple[Series, Series]:
+def series_train_test_split(data: DataFrame, trn_pct: float = 0.90) -> tuple[Series, Series]:
     trn_size: int = int(len(data) * trn_pct)
-    df_cp: Series = data.copy()
+    df_cp: DataFrame = data.copy()
     train: Series = df_cp.iloc[:trn_size, 0]
     test: Series = df_cp.iloc[trn_size:, 0]
     return train, test
