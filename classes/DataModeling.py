@@ -1,18 +1,32 @@
+from copy import deepcopy
+
 from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, savefig, show, title, imshow, imread, axis, subplots
 from typing import Literal
-from numpy import array, ndarray, std, argsort, arange
+from numpy import array, ndarray, std, argsort, arange, mean
+from pandas import Series
+from sklearn.base import RegressorMixin
 from sklearn.metrics import confusion_matrix
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, export_graphviz, plot_tree
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LinearRegression
 from subprocess import call
+from statsmodels.tsa.holtwinters import SimpleExpSmoothing
+from statsmodels.tsa.arima.model import ARIMA
+
+from torch import no_grad, tensor
+from torch.nn import LSTM, Linear, Module, MSELoss
+from torch.optim import Adam
+from torch.utils.data import DataLoader, TensorDataset
 
 from dslabs_functions import CLASS_EVAL_METRICS, DELTA_IMPROVE, plot_bar_chart, \
-    plot_multiline_chart, plot_horizontal_bar_chart, HEIGHT, plot_line_chart, plot_multibar_chart, plot_confusion_matrix, \
-    CLASS_EVAL_METRICS, DELTA_IMPROVE, read_train_test_from_files
+    plot_multiline_chart, plot_horizontal_bar_chart, HEIGHT, plot_line_chart, plot_multibar_chart, \
+    plot_confusion_matrix, \
+    CLASS_EVAL_METRICS, DELTA_IMPROVE, read_train_test_from_files, plot_forecasting_eval, plot_forecasting_series, \
+    FORECAST_MEASURES
 
 
 class DataModeling:
@@ -811,3 +825,632 @@ class DataModeling:
         savefig(f"graphs/classification/data_modeling/gb/{self.data_loader.file_tag}_gb_{eval_metric}_overfitting.png")
 
         return evaluation_results
+
+    # %% Forecasting
+
+    class SimpleAvgRegressor(RegressorMixin):
+        def __init__(self):
+            super().__init__()
+            self.mean: float = 0.0
+            return
+
+        def fit(self, X: Series):
+            self.mean = X.mean()
+            return
+
+        def predict(self, X: Series) -> Series:
+            prd: list = len(X) * [self.mean]
+            prd_series: Series = Series(prd)
+            prd_series.index = X.index
+            return prd_series
+
+    def simple_average_model_forecasting(self):
+
+        fr_mod = self.SimpleAvgRegressor()
+        fr_mod.fit(self.y_train)
+
+        prd_trn: Series = fr_mod.predict(self.y_train)
+        prd_tst: Series = fr_mod.predict(self.y_test)
+
+        plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - Simple Average")
+        savefig(f"graphs/forecasting/data_modeling/simple_average/{self.data_loader.file_tag}_simpleAvg_eval.png")
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - Simple Average",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/simple_average/{self.data_loader.file_tag}_simpleAvg_forecast.png")
+        show()
+
+        return {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+    class PersistenceOptimistRegressor(RegressorMixin):
+        def __init__(self):
+            super().__init__()
+            self.last: float = 0.0
+            return
+
+        def fit(self, X: Series):
+            self.last = X.iloc[-1]
+            # print(self.last)
+            return
+
+        def predict(self, X: Series):
+            prd: list = X.shift().values.ravel()
+            prd[0] = self.last
+            prd_series: Series = Series(prd)
+            prd_series.index = X.index
+            return prd_series
+
+    class PersistenceRealistRegressor(RegressorMixin):
+        def __init__(self):
+            super().__init__()
+            self.last = 0
+            self.estimations = [0]
+            self.obs_len = 0
+
+        def fit(self, X: Series):
+            for i in range(1, len(X)):
+                self.estimations.append(X.iloc[i - 1])
+            self.obs_len = len(self.estimations)
+            self.last = X.iloc[len(X) - 1]
+            prd_series: Series = Series(self.estimations)
+            prd_series.index = X.index
+            return prd_series
+
+        def predict(self, X: Series):
+            prd: list = len(X) * [self.last]
+            prd_series: Series = Series(prd)
+            prd_series.index = X.index
+            return prd_series
+
+    def persistence_model_forecasting(self):
+
+        eval_results = {}
+
+        # Persistence Forecasting Optimist
+        fr_mod = self.PersistenceOptimistRegressor()
+        fr_mod.fit(self.y_train)
+
+        prd_trn: Series = fr_mod.predict(self.y_train)
+        prd_tst: Series = fr_mod.predict(self.y_test)
+
+        plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - Persistence Optimist")
+        savefig(f"graphs/forecasting/data_modeling/persistence/{self.data_loader.file_tag}_persistence_optim_eval.png")
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - Persistence Optimist",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/persistence/{self.data_loader.file_tag}_persistence_optim_forecast.png")
+        show()
+
+        eval_results["Persistence Optimist"] = {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+        # Persistence Forecasting Realist
+        fr_mod = self.PersistenceRealistRegressor()
+        fr_mod.fit(self.y_train)
+
+        prd_trn: Series = fr_mod.predict(self.y_train)
+        prd_tst: Series = fr_mod.predict(self.y_test)
+
+        plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - Persistence Realist")
+        savefig(f"graphs/forecasting/data_modeling/persistence/{self.data_loader.file_tag}_persistence_real_eval.png")
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - Persistence Realist",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/persistence/{self.data_loader.file_tag}_persistence_real_forecast.png")
+        show()
+
+        eval_results["Persistence Realist"] = {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+        return eval_results
+
+    class RollingMeanRegressor(RegressorMixin):
+        def __init__(self, win: int = 3):
+            super().__init__()
+            self.win_size = win
+            self.memory: list = []
+
+        def fit(self, X: Series):
+            """
+            Store the last `win_size` values of the training series for predictions.
+            """
+            self.memory = X.iloc[-self.win_size:].tolist()
+            return self
+
+        def predict(self, X: Series):
+            """
+            Generate predictions using a rolling mean approach.
+            """
+            if len(self.memory) < self.win_size:
+                raise ValueError("Not enough data in memory to compute rolling mean.")
+
+            # Initialize estimations with the memory values
+            estimations = self.memory.copy()
+
+            # Generate predictions for the length of X
+            predictions = []
+            for _ in range(len(X)):
+                # Compute the rolling mean and add it to estimations
+                new_value = mean(estimations[-self.win_size:])
+                predictions.append(new_value)
+                estimations.append(new_value)
+
+            # Create a Series with the predictions, aligned with X's index
+            prd_series = Series(predictions, index=X.index)
+            return prd_series
+
+    def rolling_mean_study(self, train: Series, test: Series, measure: str = "R2"):
+        """
+        Performs a study to evaluate different window sizes for a rolling mean model.
+
+        Args:
+            train (Series): Training dataset.
+            test (Series): Testing dataset.
+            measure (str): Evaluation metric, either "R2" or "MAPE".
+
+        Returns:
+            best_model: The best RollingMeanRegressor model based on the evaluation metric.
+            best_params (dict): Information about the best-performing parameters.
+        """
+        # Define possible window sizes
+        win_size = [3, 5, 7, 10, 15, 20, 25, 30, 40, 50]
+
+        # Check if the evaluation metric is supported
+        if measure not in FORECAST_MEASURES:
+            raise ValueError(f"Unsupported measure: {measure}. Choose from {list(FORECAST_MEASURES.keys())}.")
+
+        flag = measure == "R2" or measure == "MAPE"
+        best_model = None
+        best_params: dict = {"name": "Rolling Mean", "metric": measure, "params": ()}
+        best_performance: float = -float('inf')  # Initialize for maximization (e.g., R2)
+
+        yvalues = []
+
+        # Iterate over each window size
+        for w in win_size:
+            # Ensure the training data is large enough for the current window size
+            if len(train) < w:
+                print(f"Skipping window size {w} as train size ({len(train)}) is smaller than the window.")
+                yvalues.append(None)  # No evaluation for this window size
+                continue
+
+            try:
+                # Initialize and fit the rolling mean model
+                pred = self.RollingMeanRegressor(win=w)
+                pred.fit(train)
+
+                # Ensure enough data for prediction
+                if len(test) < w:
+                    print(f"Skipping window size {w} as test size ({len(test)}) is smaller than the window.")
+                    yvalues.append(None)
+                    continue
+
+                # Predict and evaluate
+                prd_tst = pred.predict(test)
+                eval: float = FORECAST_MEASURES[measure](test, prd_tst)
+
+                # Track the best-performing model
+                if eval > best_performance and abs(eval - best_performance) > DELTA_IMPROVE:
+                    best_performance = eval
+                    best_params["params"] = (w,)
+                    best_model = pred
+
+                yvalues.append(eval)
+            except Exception as e:
+                print(f"Error with window size {w}: {e}")
+                yvalues.append(None)
+
+        # Display the best result
+        if best_model is not None:
+            print(f"Rolling Mean best with win={best_params['params'][0]} -> {measure}={best_performance:.4f}")
+        else:
+            print("No suitable window size found for Rolling Mean.")
+
+        # Plot performance across window sizes
+        valid_yvalues = [v for v in yvalues if v is not None]
+        valid_win_sizes = [w for w, v in zip(win_size, yvalues) if v is not None]
+
+        if valid_yvalues:
+            plot_line_chart(
+                valid_win_sizes, valid_yvalues,
+                title=f"Rolling Mean ({measure})",
+                xlabel="Window Size",
+                ylabel=measure,
+                percentage=flag,
+            )
+        else:
+            print("No valid results to plot.")
+
+        return best_model, best_params
+
+    def rolling_mean_model_forecasting(self):
+
+        measure: str = "R2"
+
+        fig = figure(figsize=(HEIGHT, HEIGHT))
+        best_model, best_params = self.rolling_mean_study(self.y_train, self.y_test)
+        savefig(f"graphs/forecasting/data_modeling/rolling_mean/{self.data_loader.file_tag}_rollingmean_{measure}_study.png")
+        show()
+
+        params = best_params["params"]
+        prd_trn: Series = best_model.predict(self.y_train)
+        prd_tst: Series = best_model.predict(self.y_test)
+
+        plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - Rolling Mean (win={params[0]})")
+        savefig(f"graphs/forecasting/data_modeling/rolling_mean/{self.data_loader.file_tag}_rollingmean_{measure}_win{params[0]}_eval.png")
+        show()
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - Rolling Mean (win={params[0]})",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/rolling_mean/{self.data_loader.file_tag}_rollingmean_{measure}_forecast.png")
+        show()
+
+        return {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+    def exponential_smoothing_study(self, train: Series, test: Series, measure: str = "R2"):
+        alpha_values = [i / 10 for i in range(1, 10)]
+        flag = measure == "R2" or measure == "MAPE"
+        best_model = None
+        best_params: dict = {"name": "Exponential Smoothing", "metric": measure, "params": ()}
+        best_performance: float = -100000
+
+        yvalues = []
+        for alpha in alpha_values:
+            tool = SimpleExpSmoothing(train)
+            model = tool.fit(smoothing_level=alpha, optimized=False)
+            prd_tst = model.forecast(steps=len(test))
+
+            eval: float = FORECAST_MEASURES[measure](test, prd_tst)
+            # print(w, eval)
+            if eval > best_performance and abs(eval - best_performance) > DELTA_IMPROVE:
+                best_performance: float = eval
+                best_params["params"] = (alpha,)
+                best_model = model
+            yvalues.append(eval)
+
+        print(f"Exponential Smoothing best with alpha={best_params['params'][0]:.0f} -> {measure}={best_performance}")
+        plot_line_chart(
+            alpha_values,
+            yvalues,
+            title=f"Exponential Smoothing ({measure})",
+            xlabel="alpha",
+            ylabel=measure,
+            percentage=flag,
+        )
+
+        return best_model, best_params
+
+    def exponential_smoothing_model_forecasting(self):
+
+        measure: str = "R2"
+
+        best_model, best_params = self.exponential_smoothing_study(self.y_train, self.y_test, measure=measure)
+        savefig(f"graphs/forecasting/data_modeling/exponential_smoothing/{self.data_loader.file_tag}_exponential_smoothing_{measure}_study.png")
+        show()
+
+        params = best_params["params"]
+        prd_trn = best_model.predict(start=0, end=len(self.y_train) - 1)
+        prd_tst = best_model.forecast(steps=len(self.y_test))
+
+        plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst,
+                              title=f"{self.data_loader.file_tag} - Exponential Smoothing alpha={params[0]}")
+        savefig(f"graphs/forecasting/data_modeling/exponential_smoothing/{self.data_loader.file_tag}_exponential_smoothing_{measure}_eval.png")
+        show()
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - Exponential Smoothing ",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/exponential_smoothing/{self.data_loader.file_tag}_exponential_smoothing_{measure}_forecast.png")
+        show()
+
+        return {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+    def linear_regression_model_forecasting(self):
+
+        data_size = len(self.y_train) + len(self.y_test)
+
+        trnX = arange(len(self.y_train)).reshape(-1, 1)
+        trnY = self.y_train.to_numpy()
+        tstX = arange(len(self.y_train), data_size).reshape(-1, 1)
+        tstY = self.y_test.to_numpy()
+
+        model = LinearRegression()
+        model.fit(trnX, trnY)
+
+        prd_trn: Series = Series(model.predict(trnX), index=self.y_train.index)
+        prd_tst: Series = Series(model.predict(tstX), index=self.y_test.index)
+
+        plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - Linear Regression")
+        savefig(f"graphs/forecasting/data_modeling/lr/{self.data_loader.file_tag}_linear_regression_eval.png")
+        show()
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - Linear Regression",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/lr/{self.data_loader.file_tag}_linear_regression_forecast.png")
+        show()
+
+        return {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+    def arima_study(self, train: Series, test: Series, measure: str = "R2"):
+        d_values = (0, 1, 2)
+        p_params = (1, 2, 3, 5, 7, 10)
+        q_params = (1, 3, 5, 7)
+
+        flag = measure == "R2" or measure == "MAPE"
+        best_model = None
+        best_params: dict = {"name": "ARIMA", "metric": measure, "params": ()}
+        best_performance: float = -100000
+
+        fig, axs = subplots(1, len(d_values), figsize=(len(d_values) * HEIGHT, HEIGHT))
+        for i in range(len(d_values)):
+            d: int = d_values[i]
+            values = {}
+            for q in q_params:
+                yvalues = []
+                for p in p_params:
+                    arima = ARIMA(train, order=(p, d, q))
+                    model = arima.fit()
+                    prd_tst = model.forecast(steps=len(test), signal_only=False)
+                    eval: float = FORECAST_MEASURES[measure](test, prd_tst)
+                    # print(f"ARIMA ({p}, {d}, {q})", eval)
+                    if eval > best_performance and abs(eval - best_performance) > DELTA_IMPROVE:
+                        best_performance: float = eval
+                        best_params["params"] = (p, d, q)
+                        best_model = model
+                    yvalues.append(eval)
+                values[q] = yvalues
+            plot_multiline_chart(
+                p_params, values, ax=axs[i], title=f"ARIMA d={d} ({measure})", xlabel="p", ylabel=measure,
+                percentage=flag
+            )
+        print(
+            f"ARIMA best results achieved with (p,d,q)=({best_params['params'][0]:.0f}, {best_params['params'][1]:.0f}, {best_params['params'][2]:.0f}) ==> measure={best_performance:.2f}"
+        )
+
+        return best_model, best_params
+
+    def arima_model_forecasting(self):
+
+        measure: str = "R2"
+
+        predictor = ARIMA(self.y_train, order=(3, 1, 2))
+        model = predictor.fit()
+        print(model.summary())
+
+        model.plot_diagnostics(figsize=(2 * HEIGHT, 1.5 * HEIGHT))
+        show()
+
+        best_model, best_params = self.arima_study(self.y_train, self.y_test, measure=measure)
+        savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_study.png")
+        show()
+
+        params = best_params["params"]
+        prd_trn = best_model.predict(start=0, end=len(self.y_train) - 1)
+        prd_tst = best_model.forecast(steps=len(self.y_test))
+
+        plot_forecasting_eval(
+            self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - ARIMA (p={params[0]}, d={params[1]}, q={params[2]})"
+        )
+        savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_eval.png")
+        show()
+
+        plot_forecasting_series(
+            self.y_train,
+            self.y_test,
+            prd_tst,
+            title=f"{self.data_loader.file_tag} - ARIMA ",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_forecast.png")
+        show()
+
+        return {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train, prd_trn),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test, prd_tst),
+        }
+
+    def prepare_dataset_for_lstm(self, series, seq_length: int = 4):
+        # Adjust sequence length if it exceeds the series size
+        seq_length = min(seq_length, len(series) - 1)
+        setX: list = []
+        setY: list = []
+        for i in range(len(series) - seq_length):
+            past = series[i: i + seq_length]
+            future = series[i + seq_length]
+            setX.append(past)
+            setY.append(future)
+        return tensor(setX).float().unsqueeze(-1), tensor(setY).float().unsqueeze(-1)
+
+    class DS_LSTM(Module):
+
+        def __init__(self, train, input_size: int = 1, hidden_size: int = 50, num_layers: int = 1, length: int = 4):
+            super().__init__()
+            self.lstm = LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
+            self.linear = Linear(hidden_size, 1)
+            self.optimizer = Adam(self.parameters())
+            self.loss_fn = MSELoss()
+
+            trnX, trnY = self.prepare_dataset_for_lstm(train, seq_length=length)
+            self.loader = DataLoader(TensorDataset(trnX, trnY), shuffle=True, batch_size=max(1, len(trnX) // 10))
+
+        def forward(self, x):
+            x, _ = self.lstm(x)
+            x = self.linear(x[:, -1, :])  # Use only the last time step's output
+            return x
+
+        def fit(self):
+            self.train()
+            for batchX, batchY in self.loader:
+                y_pred = self(batchX)
+                loss = self.loss_fn(y_pred, batchY)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+            return loss.item()
+
+        def predict(self, X):
+            with no_grad():
+                y_pred = self(X)
+            return y_pred
+
+        def prepare_dataset_for_lstm(self, series, seq_length: int = 4):
+            # Adjust sequence length if it exceeds the series size
+            seq_length = min(seq_length, len(series) - 1)
+            setX: list = []
+            setY: list = []
+            for i in range(len(series) - seq_length):
+                past = series[i: i + seq_length]
+                future = series[i + seq_length]
+                setX.append(past)
+                setY.append(future)
+            return tensor(setX).float().unsqueeze(-1), tensor(setY).float().unsqueeze(-1)
+
+    def lstm_study(self, train, test, nr_episodes: int = 1000, measure: str = "R2"):
+        sequence_size = [2, 4, 8]
+        nr_hidden_units = [25, 50, 100]
+
+        step: int = nr_episodes // 10
+        episodes = [1] + list(range(0, nr_episodes + 1, step))[1:]
+        best_model = None
+        best_params: dict = {"name": "LSTM", "metric": measure, "params": ()}
+        best_performance: float = -float("inf")
+
+        for length in sequence_size:
+            # Adjust sequence length for the test dataset
+            adjusted_length = min(length, len(test) - 1)
+            tstX, tstY = self.prepare_dataset_for_lstm(test, seq_length=adjusted_length)
+
+            for hidden in nr_hidden_units:
+                model = self.DS_LSTM(train, input_size=1, hidden_size=hidden, length=adjusted_length)
+                for n in range(nr_episodes + 1):
+                    model.fit()
+                    if n % step == 0:
+                        prd_tst = model.predict(tstX)
+                        eval: float = FORECAST_MEASURES[measure](test[adjusted_length:], prd_tst)
+                        print(
+                            f"seq length={adjusted_length} hidden_units={hidden} nr_episodes={n} ==> {measure}: {eval:.2f}")
+                        if eval > best_performance:
+                            best_performance = eval
+                            best_params["params"] = (adjusted_length, hidden, n)
+                            best_model = deepcopy(model)
+        print(
+            f"LSTM best results with seq length={best_params['params'][0]}, hidden_units={best_params['params'][1]}, "
+            f"nr_episodes={best_params['params'][2]} ==> {measure}={best_performance:.2f}"
+        )
+        return best_model, best_params
+
+    def lstm_model_forecasting(self):
+        measure: str = "R2"
+
+        # Convert Y_train and Y_test to numpy arrays, keeping the original index
+        Y_train = self.y_train.values.astype("float32")
+        Y_test = self.y_test.values.astype("float32")
+
+        print(f"Train shape={Y_train.shape} Test shape={Y_test.shape}")
+
+        # Initialize and train the LSTM model
+        model = self.DS_LSTM(Y_train, input_size=1, hidden_size=50, num_layers=1)
+        loss = model.fit()
+        print(f"Training Loss: {loss}")
+
+        # Perform LSTM study to find the best model and parameters
+        best_model, best_params = self.lstm_study(Y_train, Y_test, nr_episodes=3000, measure=measure)
+
+        # Extract best parameters
+        params = best_params["params"]
+        best_length = params[0]
+
+        # Prepare datasets with the best sequence length
+        trnX, trnY = self.prepare_dataset_for_lstm(Y_train, seq_length=best_length)
+        tstX, tstY = self.prepare_dataset_for_lstm(Y_test, seq_length=best_length)
+
+        # Make predictions using the best model
+        prd_trn = best_model.predict(trnX)
+        prd_tst = best_model.predict(tstX)
+
+        # Convert predictions and data back to pandas Series for plotting
+        prd_trn_series = Series(prd_trn.numpy().ravel(), index=self.y_train.index[best_length:])
+        prd_tst_series = Series(prd_tst.numpy().ravel(), index=self.y_test.index[best_length:])
+
+        # Plot evaluation of forecasting
+        plot_forecasting_eval(
+            self.y_train[best_length:],  # Convert to Series
+            self.y_test[best_length:],  # Convert to Series
+            prd_trn_series,
+            prd_tst_series,
+            title=f"{self.data_loader.file_tag} - LSTM (length={best_length}, hidden={params[1]}, epochs={params[2]})",
+        )
+        savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_eval.png")
+        show()
+
+        # Create a pandas Series for the predicted test series
+        pred_series: Series = Series(prd_tst.numpy().ravel(), index=self.y_test.index[best_length:])
+
+        # Plot forecasting series
+        plot_forecasting_series(
+            self.y_train[best_length:],
+            self.y_test[best_length:],
+            pred_series,
+            title=f"{self.data_loader.file_tag} - LSTMs ",
+            xlabel=self.data_loader.read_options["index_col"],
+            ylabel=self.data_loader.target,
+        )
+        savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_forecast.png")
+        show()
+
+        return {
+            "R2_train": FORECAST_MEASURES["R2"](self.y_train[best_length:], prd_trn_series),
+            "R2_test": FORECAST_MEASURES["R2"](self.y_test[best_length:], prd_tst_series),
+        }
