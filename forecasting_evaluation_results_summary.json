@@ -1,0 +1,74 @@
+{
+    "NY Arrests": {
+        "Simple Average": {
+            "R2_train": 0.0,
+            "R2_test": -76.20564955801096
+        },
+        "Persistence Model": {
+            "Persistence Optimist": {
+                "R2_train": 0.7710482762200617,
+                "R2_test": 0.3558147597555533
+            },
+            "Persistence Realist": {
+                "R2_train": -10.639542493329769,
+                "R2_test": -3.368563265168805
+            }
+        },
+        "Rolling Mean": {
+            "R2_train": -7.878686961040646,
+            "R2_test": -0.10689580385226738
+        },
+        "Exponential Smoothing": {
+            "R2_train": 0.8569834415986934,
+            "R2_test": -0.007704175098267152
+        },
+        "Linear Regression": {
+            "R2_train": 0.6152095842055552,
+            "R2_test": -15.109513921508807
+        },
+        "ARIMA": {
+            "R2_train": 0.8950563015516475,
+            "R2_test": 0.18214687662997853
+        },
+        "LSTM": {
+            "R2_train": 0.9188554884790213,
+            "R2_test": 0.3362235648034084
+        }
+    },
+    "GDP": {
+        "Simple Average": {
+            "R2_train": 0.0,
+            "R2_test": -201.16290955885293
+        },
+        "Persistence Model": {
+            "Persistence Optimist": {
+                "R2_train": 0.7760347841019974,
+                "R2_test": -1.067626151210229
+            },
+            "Persistence Realist": {
+                "R2_train": -4.753747256442311,
+                "R2_test": -1.5617308367388745
+            }
+        },
+        "Rolling Mean": {
+            "R2_train": -4.239323005884702,
+            "R2_test": -0.04667288009188342
+        },
+        "Exponential Smoothing": {
+            "R2_train": 0.9429430978396938,
+            "R2_test": -0.03844176927537157
+        },
+        "Linear Regression": {
+            "R2_train": 0.8951394473702725,
+            "R2_test": -2.755074916165801
+        },
+        "ARIMA": {
+            "R2_train": 0.9566821641704216,
+            "R2_test": -0.7660105857989805
+        },
+        "LSTM": {
+            "R2_train": 0.9911621649580096,
+            "R2_test": 0.3053921102522049
+        }
+    }
+}

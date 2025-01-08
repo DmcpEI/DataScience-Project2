@@ -762,52 +762,79 @@ class DataProfiling:
 
         series: Series = self.data_loader.data[self.data_loader.target]
 
-        ss_days: Series = self.ts_aggregation_by(series, "D")
-        ss_weeks: Series = self.ts_aggregation_by(series, "W")
-        ss_months: Series = self.ts_aggregation_by(series, "M")
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            ss_daily: Series = self.ts_aggregation_by(series, "D")
+            ss_monthly: Series = self.ts_aggregation_by(series, "M")
+            ss_yearly: Series = self.ts_aggregation_by(series, "Y")
 
-        fig: Figure
-        axs: array
-        fig, axs = subplots(2, 3, figsize=(2 * HEIGHT, HEIGHT))
-        set_chart_labels(axs[0, 0], title="DAILY")
-        axs[0, 0].boxplot(ss_days)
-        set_chart_labels(axs[0, 1], title="WEEKLY")
-        axs[0, 1].boxplot(ss_weeks)
-        set_chart_labels(axs[0, 2], title="MONTHLY")
-        axs[0, 2].boxplot(ss_months)
+            aggregations = {
+                "DAILY": ss_daily,
+                "MONTHLY": ss_monthly,
+                "YEARLY": ss_yearly
+            }
+        else:
+            # Aggregation for yearly, five-year, and decade
+            ss_yearly: Series = self.ts_aggregation_by(series, "Y")
+            ss_five_years: Series = self.ts_aggregation_by(series, "five_years")
+            ss_decade: Series = self.ts_aggregation_by(series, "decade")
 
-        axs[1, 0].grid(False)
-        axs[1, 0].set_axis_off()
-        axs[1, 0].text(0.2, 0, str(ss_days.describe()), fontsize="small")
+            aggregations = {
+                "YEARLY": ss_yearly,
+                "FIVE-YEAR": ss_five_years,
+                "DECADE": ss_decade
+            }
 
-        axs[1, 1].grid(False)
-        axs[1, 1].set_axis_off()
-        axs[1, 1].text(0.2, 0, str(ss_weeks.describe()), fontsize="small")
+        # Create subplots based on the number of aggregations
+        num_aggregations = len(aggregations)
+        fig, axs = subplots(2, num_aggregations, figsize=(2 * HEIGHT, HEIGHT))
 
-        axs[1, 2].grid(False)
-        axs[1, 2].set_axis_off()
-        axs[1, 2].text(0.2, 0, str(ss_months.describe()), fontsize="small")
+        for i, (title, agg_series) in enumerate(aggregations.items()):
+            set_chart_labels(axs[0, i], title=title)
+            axs[0, i].boxplot(agg_series)
 
+            axs[1, i].grid(False)
+            axs[1, i].set_axis_off()
+            axs[1, i].text(0.2, 0, str(agg_series.describe()), fontsize="small")
+
+        # Hide any remaining unused subplots
+        for j in range(num_aggregations, 3):
+            axs[0, j].grid(False)
+            axs[0, j].set_axis_off()
+
+        savefig(f"graphs/forecasting/data_profiling/data_distribution/{self.data_loader.file_tag}_distribuition_boxplot.png")
         show()
 
     def plot_distribuition_histograms(self):
-
         series: Series = self.data_loader.data[self.data_loader.target]
 
-        ss_days: Series = self.ts_aggregation_by(series, gran_level="D")
-        ss_weeks: Series = self.ts_aggregation_by(series, "W")
-        ss_months: Series = self.ts_aggregation_by(series, gran_level="M")
-        ss_quarters: Series = self.ts_aggregation_by(series, gran_level="Q")
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            # Aggregation for daily, monthly, and yearly
+            ss_daily: Series = self.ts_aggregation_by(series, gran_level="D")
+            ss_monthly: Series = self.ts_aggregation_by(series, gran_level="M")
+            ss_yearly: Series = self.ts_aggregation_by(series, gran_level="Y")
 
-        grans: list[Series] = [ss_days, ss_weeks, ss_months, ss_quarters]
-        gran_names: list[str] = ["Daily", "Weekly", "Monthly", "Quarterly"]
+            grans: list[Series] = [ss_daily, ss_monthly, ss_yearly]
+            gran_names: list[str] = ["Daily", "Monthly", "Yearly"]
+        else:
+            # Aggregation for yearly, five-year, and decade
+            ss_yearly: Series = self.ts_aggregation_by(series, gran_level="Y")
+            ss_five_years: Series = self.ts_aggregation_by(series, gran_level="five_years")
+            ss_decade: Series = self.ts_aggregation_by(series, gran_level="decade")
+
+            grans: list[Series] = [ss_yearly, ss_five_years, ss_decade]
+            gran_names: list[str] = ["Yearly", "Five-Year", "Decade"]
+
+        # Create subplots based on the number of aggregations
         fig: Figure
         axs: array
         fig, axs = subplots(1, len(grans), figsize=(len(grans) * HEIGHT, HEIGHT))
         fig.suptitle(f"{self.data_loader.file_tag} {self.data_loader.target}")
+
         for i in range(len(grans)):
             set_chart_labels(axs[i], title=f"{gran_names[i]}", xlabel=self.data_loader.target, ylabel="Nr records")
             axs[i].hist(grans[i].values)
+
+        savefig(f"graphs/forecasting/data_profiling/data_distribution/{self.data_loader.file_tag}_distribuition_histograms.png")
         show()
 
     def _get_lagged_series(self, series: Series, max_lag: int, delta: int = 1):
@@ -823,6 +850,7 @@ class DataProfiling:
         figure(figsize=(3 * HEIGHT, HEIGHT))
         lags = self._get_lagged_series(series, 20, 10)
         plot_multiline_chart(series.index.to_list(), lags, xlabel=self.data_loader.read_options["index_col"], ylabel=self.data_loader.target)
+        savefig(f"graphs/forecasting/data_profiling/data_distribution/{self.data_loader.file_tag}_distribuition_lag_plots.png")
         show()
 
     def _autocorrelation_study(self, series: Series, max_lag: int, delta: int = 1):
@@ -847,6 +875,7 @@ class DataProfiling:
 
         series: Series = self.data_loader.data[self.data_loader.target]
         self._autocorrelation_study(series, 10, 1)
+        savefig(f"graphs/forecasting/data_profiling/data_distribution/{self.data_loader.file_tag}_autocorrelation.png")
         show()
 
     def _plot_components(
@@ -875,12 +904,18 @@ class DataProfiling:
 
         series: Series = self.data_loader.data[self.data_loader.target]
 
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            original_level = "Daily"
+        else:
+            original_level = "Yearly"
+
         self._plot_components(
             series,
-            title=f"{self.data_loader.file_tag} hourly {self.data_loader.target}",
+            title=f"{self.data_loader.file_tag} - {self.data_loader.target} ({original_level})",
             x_label=series.index.name,
             y_label=self.data_loader.target,
         )
+        savefig(f"graphs/forecasting/data_profiling/data_stationarity/{self.data_loader.file_tag}_components.png")
         show()
 
         figure(figsize=(3 * HEIGHT, HEIGHT))
@@ -889,12 +924,13 @@ class DataProfiling:
             series.to_list(),
             xlabel=series.index.name,
             ylabel=self.data_loader.target,
-            title=f"{self.data_loader.file_tag} stationary study",
+            title=f"{self.data_loader.file_tag} Stationary Study",
             name="original",
         )
         n: int = len(series)
         plot(series.index, [series.mean()] * n, "r-", label="mean")
         legend()
+        savefig(f"graphs/forecasting/data_profiling/data_stationarity/{self.data_loader.file_tag}_stationarity_study.png")
         show()
 
         BINS = 10
@@ -912,13 +948,14 @@ class DataProfiling:
             series.to_list(),
             xlabel=series.index.name,
             ylabel=self.data_loader.target,
-            title=f"{self.data_loader.file_tag} stationary study",
+            title=f"{self.data_loader.file_tag} Stationary Study with STDev",
             name="original",
             show_stdev=True,
         )
         n: int = len(series)
         plot(series.index, mean_line, "r-", label="mean")
         legend()
+        savefig(f"graphs/forecasting/data_profiling/data_stationarity/{self.data_loader.file_tag}_stationarity_study_stdev.png")
         show()
 
     def augmented_dicker_fuller_test(self):
