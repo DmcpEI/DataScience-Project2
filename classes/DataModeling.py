@@ -1,19 +1,18 @@
 from copy import deepcopy
 
 from matplotlib.figure import Figure
-from matplotlib.pyplot import figure, savefig, show, title, imshow, imread, axis, subplots
+from matplotlib.pyplot import figure, savefig, show, subplots
 from typing import Literal
 from numpy import array, ndarray, std, argsort, arange, mean
 from pandas import Series
 from sklearn.base import RegressorMixin
 from sklearn.metrics import confusion_matrix
-from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
+from sklearn.naive_bayes import GaussianNB, BernoulliNB
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier, export_graphviz, plot_tree
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LinearRegression
-from subprocess import call
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
 from statsmodels.tsa.arima.model import ARIMA
 
@@ -22,10 +21,10 @@ from torch.nn import LSTM, Linear, Module, MSELoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
 
-from dslabs_functions import CLASS_EVAL_METRICS, DELTA_IMPROVE, plot_bar_chart, \
+from config.dslabs_functions import plot_bar_chart, \
     plot_multiline_chart, plot_horizontal_bar_chart, HEIGHT, plot_line_chart, plot_multibar_chart, \
     plot_confusion_matrix, \
-    CLASS_EVAL_METRICS, DELTA_IMPROVE, read_train_test_from_files, plot_forecasting_eval, plot_forecasting_series, \
+    CLASS_EVAL_METRICS, DELTA_IMPROVE, plot_forecasting_eval, plot_forecasting_series, \
     FORECAST_MEASURES
 
 
@@ -1189,18 +1188,11 @@ class DataModeling:
 
     def linear_regression_model_forecasting(self):
 
-        data_size = len(self.y_train) + len(self.y_test)
-
-        trnX = arange(len(self.y_train)).reshape(-1, 1)
-        trnY = self.y_train.to_numpy()
-        tstX = arange(len(self.y_train), data_size).reshape(-1, 1)
-        tstY = self.y_test.to_numpy()
-
         model = LinearRegression()
-        model.fit(trnX, trnY)
+        model.fit(self.X_train, self.y_train)
 
-        prd_trn: Series = Series(model.predict(trnX), index=self.y_train.index)
-        prd_tst: Series = Series(model.predict(tstX), index=self.y_test.index)
+        prd_trn: Series = Series(model.predict(self.X_train), index=self.y_train.index)
+        prd_tst: Series = Series(model.predict(self.X_test), index=self.y_test.index)
 
         plot_forecasting_eval(self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - Linear Regression")
         savefig(f"graphs/forecasting/data_modeling/lr/{self.data_loader.file_tag}_linear_regression_eval.png")
@@ -1260,7 +1252,7 @@ class DataModeling:
 
         return best_model, best_params
 
-    def arima_model_forecasting(self):
+    def arima_model_forecasting(self, multivariate: bool = False):
 
         measure: str = "R2"
 
@@ -1272,7 +1264,10 @@ class DataModeling:
         show()
 
         best_model, best_params = self.arima_study(self.y_train, self.y_test, measure=measure)
-        savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_study.png")
+        if multivariate:
+            savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_study_multivariate.png")
+        else:
+            savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_study.png")
         show()
 
         params = best_params["params"]
@@ -1282,7 +1277,10 @@ class DataModeling:
         plot_forecasting_eval(
             self.y_train, self.y_test, prd_trn, prd_tst, title=f"{self.data_loader.file_tag} - ARIMA (p={params[0]}, d={params[1]}, q={params[2]})"
         )
-        savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_eval.png")
+        if multivariate:
+            savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_eval_multivariate.png")
+        else:
+            savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_eval.png")
         show()
 
         plot_forecasting_series(
@@ -1293,7 +1291,10 @@ class DataModeling:
             xlabel=self.data_loader.read_options["index_col"],
             ylabel=self.data_loader.target,
         )
-        savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_forecast.png")
+        if multivariate:
+            savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_forecast_multivariate.png")
+        else:
+            savefig(f"graphs/forecasting/data_modeling/arima/{self.data_loader.file_tag}_arima_{measure}_forecast.png")
         show()
 
         return {
@@ -1363,35 +1364,59 @@ class DataModeling:
 
         step: int = nr_episodes // 10
         episodes = [1] + list(range(0, nr_episodes + 1, step))[1:]
+        flag = measure in ["R2", "MAPE"]
         best_model = None
         best_params: dict = {"name": "LSTM", "metric": measure, "params": ()}
         best_performance: float = -float("inf")
+        delta_improve = 1e-6
 
-        for length in sequence_size:
-            # Adjust sequence length for the test dataset
-            adjusted_length = min(length, len(test) - 1)
-            tstX, tstY = self.prepare_dataset_for_lstm(test, seq_length=adjusted_length)
+        # Filter sequence_size to ensure valid lengths based on the test set
+        valid_sequence_size = [length for length in sequence_size if length <= len(test) - 1]
 
+        # Create subplots dynamically
+        _, axs = subplots(1, len(valid_sequence_size), figsize=(len(valid_sequence_size) * HEIGHT, HEIGHT))
+        if len(valid_sequence_size) == 1:
+            axs = [axs]  # Wrap single Axes object in a list
+
+        for i, length in enumerate(valid_sequence_size):
+            tstX, tstY = self.prepare_dataset_for_lstm(test, seq_length=length)
+
+            values = {}
             for hidden in nr_hidden_units:
-                model = self.DS_LSTM(train, input_size=1, hidden_size=hidden, length=adjusted_length)
-                for n in range(nr_episodes + 1):
+                yvalues = []
+                model = self.DS_LSTM(train, input_size=1, hidden_size=hidden, length=length)
+                for n in range(0, nr_episodes + 1):
                     model.fit()
                     if n % step == 0:
                         prd_tst = model.predict(tstX)
-                        eval: float = FORECAST_MEASURES[measure](test[adjusted_length:], prd_tst)
-                        print(
-                            f"seq length={adjusted_length} hidden_units={hidden} nr_episodes={n} ==> {measure}: {eval:.2f}")
-                        if eval > best_performance:
+                        eval: float = FORECAST_MEASURES[measure](test[length:], prd_tst)
+                        print(f"seq length={length} hidden_units={hidden} nr_episodes={n} ==> {measure}: {eval:.2f}")
+                        if eval > best_performance and abs(eval - best_performance) > delta_improve:
                             best_performance = eval
-                            best_params["params"] = (adjusted_length, hidden, n)
+                            best_params["params"] = (length, hidden, n)
                             best_model = deepcopy(model)
+                        yvalues.append(eval)
+                values[hidden] = yvalues
+
+            # Plot on the appropriate subplot
+            plot_multiline_chart(
+                episodes,
+                values,
+                ax=axs[i],
+                title=f"LSTM seq length={length} ({measure})",
+                xlabel="nr episodes",
+                ylabel=measure,
+                percentage=flag,
+            )
+
         print(
-            f"LSTM best results with seq length={best_params['params'][0]}, hidden_units={best_params['params'][1]}, "
-            f"nr_episodes={best_params['params'][2]} ==> {measure}={best_performance:.2f}"
+            f"LSTM best results achieved with seq length={best_params['params'][0]}, "
+            f"hidden_units={best_params['params'][1]}, and nr_episodes={best_params['params'][2]} ==> "
+            f"{measure}={best_performance:.2f}"
         )
         return best_model, best_params
 
-    def lstm_model_forecasting(self):
+    def lstm_model_forecasting(self, multivariate: bool = False):
         measure: str = "R2"
 
         # Convert Y_train and Y_test to numpy arrays, keeping the original index
@@ -1407,6 +1432,11 @@ class DataModeling:
 
         # Perform LSTM study to find the best model and parameters
         best_model, best_params = self.lstm_study(Y_train, Y_test, nr_episodes=3000, measure=measure)
+        if multivariate:
+            savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_study_multivariate.png")
+        else:
+            savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_study.png")
+        show()
 
         # Extract best parameters
         params = best_params["params"]
@@ -1432,7 +1462,10 @@ class DataModeling:
             prd_tst_series,
             title=f"{self.data_loader.file_tag} - LSTM (length={best_length}, hidden={params[1]}, epochs={params[2]})",
         )
-        savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_eval.png")
+        if multivariate:
+            savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_eval_multivariate.png")
+        else:
+            savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_eval.png")
         show()
 
         # Create a pandas Series for the predicted test series
@@ -1447,7 +1480,10 @@ class DataModeling:
             xlabel=self.data_loader.read_options["index_col"],
             ylabel=self.data_loader.target,
         )
-        savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_forecast.png")
+        if multivariate:
+            savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_forecast_multivariate.png")
+        else:
+            savefig(f"graphs/forecasting/data_modeling/lstm/{self.data_loader.file_tag}_lstms_{measure}_forecast.png")
         show()
 
         return {

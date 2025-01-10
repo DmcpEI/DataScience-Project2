@@ -1,15 +1,11 @@
 # %% Class Imports
 import json
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-
 from classes.DataLoader import DataManipulator
 from classes.DataProfiling import DataProfiling
 from classes.DataProcessing import DataProcessing
 from classes.DataModeling import DataModeling
-from dslabs_functions import series_train_test_split, dataframe_temporal_train_test_split
+from config.dslabs_functions import dataframe_temporal_train_test_split
 
 # %% 0- Data Loading
 
@@ -49,30 +45,30 @@ data_profiling1 = DataProfiling(data_loader1)
 data_profiling2 = DataProfiling(data_loader2)
 
 # Data Dimensionality
-data_profiling1.plot_unvariate_forecasting()
-data_profiling2.plot_unvariate_forecasting()
-data_profiling1.plot_multivariate_forecasting()
-data_profiling2.plot_multivariate_forecasting()
+# data_profiling1.plot_unvariate_forecasting()
+# data_profiling2.plot_unvariate_forecasting()
+# data_profiling1.plot_multivariate_forecasting()
+# data_profiling2.plot_multivariate_forecasting()
 
 # Data Granularity
-data_profiling1.plot_granularity_forecasting()
-data_profiling2.plot_granularity_forecasting()
+# data_profiling1.plot_granularity_forecasting()
+# data_profiling2.plot_granularity_forecasting()
 
 # Data Distribution
-data_profiling1.plot_distribuition_boxplot()
-data_profiling2.plot_distribuition_boxplot()
-data_profiling1.plot_distribuition_histograms()
-data_profiling2.plot_distribuition_histograms()
-data_profiling1.plot_distribuition_lag_plots()
-data_profiling2.plot_distribuition_lag_plots()
-data_profiling1.plot_autocorrelation()
-data_profiling2.plot_autocorrelation()
+# data_profiling1.plot_distribuition_boxplot()
+# data_profiling2.plot_distribuition_boxplot()
+# data_profiling1.plot_distribuition_histograms()
+# data_profiling2.plot_distribuition_histograms()
+# data_profiling1.plot_distribuition_lag_plots()
+# data_profiling2.plot_distribuition_lag_plots()
+# data_profiling1.plot_autocorrelation()
+# data_profiling2.plot_autocorrelation()
 
 # Data Stationarity
-data_profiling1.plot_sesonality()
-data_profiling2.plot_sesonality()
-data_profiling1.augmented_dicker_fuller_test()
-data_profiling2.augmented_dicker_fuller_test()
+# data_profiling1.plot_sesonality()
+# data_profiling2.plot_sesonality()
+# data_profiling1.augmented_dicker_fuller_test()
+# data_profiling2.augmented_dicker_fuller_test()
 
 # %% 2- Data Preparation
 
@@ -81,10 +77,8 @@ data_processing1 = DataProcessing(data_loader1)
 data_processing2 = DataProcessing(data_loader2)
 
 # Handle Missing Values
-# techniques1 = data_processing1.handle_missing_values_forecasting()
 data_processing1.apply_best_missing_value_approach_forecasting('Mean', {'Mean': 0})
 
-# techniques2 = data_processing2.handle_missing_values_forecasting()
 data_processing2.apply_best_missing_value_approach_forecasting('Mean', {'Mean': 0})
 
 # Save the data
@@ -110,11 +104,11 @@ data_loader2.data.to_csv("data/forecast_gdp_europe_scaled.csv", index=True)
 
 # Handle Aggregation
 techniques1 = data_processing1.handle_aggregation_forecasting()
-print(f"\nFrom the plots we conclude that the best approach is to aggregate the {data_loader1.file_tag} dataset\n")
+print(f"\nFrom the plots we conclude that the best approach is to aggregate the {data_loader1.file_tag} dataset by month\n")
 data_processing1.apply_best_aggregation_approach_forecasting("monthly", techniques1)
 
 techniques2 = data_processing2.handle_aggregation_forecasting()
-print(f"\nFrom the plots we conclude that the best approach is to aggregate the {data_loader2.file_tag} dataset\n")
+print(f"\nFrom the plots we conclude that the best approach is to not aggregate the {data_loader2.file_tag} dataset\n")
 data_processing2.apply_best_aggregation_approach_forecasting("Original", techniques2)
 
 # Save the data
@@ -161,6 +155,10 @@ data_processing2.apply_best_smoothing_approach_forecasting("Original", technique
 X1_train, y1_train = data_processing1.X_train, data_processing1.y_train
 X2_train, y2_train = data_processing2.X_train, data_processing2.y_train
 
+# Save the data
+X2_train_without_diff, y2_train_without_diff = X2_train, y2_train
+X2_test_without_diff, y2_test_without_diff = X2_test, y2_test
+
 # Handle Differentiation
 techniques1, differentiated_data1 = data_processing1.handle_differentiation_forecasting(X1_train, X1_test, y1_train, y1_test)
 print(f"\nFrom the plots we conclude that the best approach is to differentiate the {data_loader1.file_tag} dataset\n")
@@ -168,7 +166,7 @@ data_processing1.apply_best_differentiation_approach_forecasting("Original", tec
 
 techniques2, differentiated_data2 = data_processing2.handle_differentiation_forecasting(X2_train, X2_test, y2_train, y2_test)
 print(f"\nFrom the plots we conclude that the best approach is to differentiate the {data_loader2.file_tag} dataset\n")
-data_processing2.apply_best_differentiation_approach_forecasting("Original", techniques2, differentiated_data2)
+data_processing2.apply_best_differentiation_approach_forecasting("Second Derivative", techniques2, differentiated_data2)
 
 X1_train, y1_train, X1_test, y1_test = data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test
 X2_train, y2_train, X2_test, y2_test = data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test
@@ -241,23 +239,65 @@ print("\nLinear Regression Forecasting Results")
 print("NY Arrests:", results_summary["NY Arrests"]["Linear Regression"])
 print("GDP:", results_summary["GDP"]["Linear Regression"])
 
-# ARIMA
+# ARIMA Univariate
 print("\nARIMA Forecasting Approach:")
-results_summary["NY Arrests"]["ARIMA"] = data_modeling1.arima_model_forecasting()
-results_summary["GDP"]["ARIMA"] = data_modeling2.arima_model_forecasting()
+results_summary["NY Arrests"]["ARIMA_Univariate"] = data_modeling1.arima_model_forecasting()
+results_summary["GDP"]["ARIMA_Univariate"] = data_modeling2.arima_model_forecasting()
 
 print("\nARIMA Forecasting Results")
-print("NY Arrests:", results_summary["NY Arrests"]["ARIMA"])
-print("GDP:", results_summary["GDP"]["ARIMA"])
+print("NY Arrests:", results_summary["NY Arrests"]["ARIMA_Univariate"])
+print("GDP:", results_summary["GDP"]["ARIMA_Univariate"])
 
-# LSTM
+# LSTM Univariate
 print("\nLSTM Forecasting Approach:")
-results_summary["NY Arrests"]["LSTM"] = data_modeling1.lstm_model_forecasting()
-results_summary["GDP"]["LSTM"] = data_modeling2.lstm_model_forecasting()
+results_summary["NY Arrests"]["LSTM_Univariate"] = data_modeling1.lstm_model_forecasting()
+results_summary["GDP"]["LSTM_Univariate"] = data_modeling2.lstm_model_forecasting()
 
 print("\nLSTM Forecasting Results")
-print("NY Arrests:", results_summary["NY Arrests"]["LSTM"])
-print("GDP:", results_summary["GDP"]["LSTM"])
+print("NY Arrests:", results_summary["NY Arrests"]["LSTM_Univariate"])
+print("GDP:", results_summary["GDP"]["LSTM_Univariate"])
+
+# Multivariate Forecasting
+techniques1, multivariate_data1 = data_processing1.handle_differentiation_multivariate_forecasting(X1_train, X1_test, y1_train, y1_test)
+print(f"\nFrom the plots we conclude that the best approach is to use the following features for the {data_loader1.file_tag} dataset\n")
+data_processing1.apply_best_differentiation_multivariate_approach_forecasting("Original", techniques1, multivariate_data1)
+
+techniques2, multivariate_data2 = data_processing2.handle_differentiation_multivariate_forecasting(X2_train_without_diff, X2_test_without_diff, y2_train_without_diff, y2_test_without_diff)
+print(f"\nFrom the plots we conclude that the best approach is to use the following features for the {data_loader2.file_tag} dataset\n")
+data_processing2.apply_best_differentiation_multivariate_approach_forecasting("First Derivative", techniques2, multivariate_data2)
+
+# Save the data
+X1_train, y1_train, X1_test, y1_test = data_processing1.X_train, data_processing1.y_train, data_processing1.X_test, data_processing1.y_test
+X2_train, y2_train, X2_test, y2_test = data_processing2.X_train, data_processing2.y_train, data_processing2.X_test, data_processing2.y_test
+
+# Save the data
+data_modeling1.X_train = X1_train
+data_modeling1.X_test = X1_test
+data_modeling1.y_train = y1_train
+data_modeling1.y_test = y1_test
+
+data_modeling2.X_train = X2_train
+data_modeling2.X_test = X2_test
+data_modeling2.y_train = y2_train
+data_modeling2.y_test = y2_test
+
+# ARIMA Multivariate
+print("\nARIMA Multivariate Forecasting Approach:")
+results_summary["NY Arrests"]["ARIMA_Multivariate"] = data_modeling1.arima_model_forecasting(multivariate=True)
+results_summary["GDP"]["ARIMA_Multivariate"] = data_modeling2.arima_model_forecasting(multivariate=True)
+
+print("\nARIMA Multivariate Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["ARIMA_Multivariate"])
+print("GDP:", results_summary["GDP"]["ARIMA_Multivariate"])
+
+# LSTM Multivariate
+print("\nLSTM Multivariate Forecasting Approach:")
+results_summary["NY Arrests"]["LSTM_Multivariate"] = data_modeling1.lstm_model_forecasting(multivariate=True)
+results_summary["GDP"]["LSTM_Multivariate"] = data_modeling2.lstm_model_forecasting(multivariate=True)
+
+print("\nLSTM Multivariate Forecasting Results")
+print("NY Arrests:", results_summary["NY Arrests"]["LSTM_Multivariate"])
+print("GDP:", results_summary["GDP"]["LSTM_Multivariate"])
 
 # Save results to a file (optional)
 with open("forecasting_evaluation_results_summary.json", "w") as file:

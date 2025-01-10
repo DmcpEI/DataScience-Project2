@@ -1,7 +1,7 @@
 import math
 import pandas as pd
 from matplotlib.gridspec import GridSpec
-from pandas import Series, DataFrame, Index, Period
+from pandas import Series, DataFrame
 import numpy as np
 from numpy import ndarray, array
 from matplotlib import pyplot as plt
@@ -13,8 +13,8 @@ from scipy.stats import norm, expon, lognorm
 from statsmodels.tsa.seasonal import DecomposeResult, seasonal_decompose
 from statsmodels.tsa.stattools import adfuller
 
-from dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
-    plot_multi_scatters_chart, set_chart_labels, define_grid, plot_line_chart, ts_aggregation_by, plot_multiline_chart
+from config.dslabs_functions import plot_bar_chart, get_variable_types, derive_date_variables, HEIGHT, \
+    plot_multi_scatters_chart, set_chart_labels, define_grid, plot_line_chart, plot_multiline_chart
 
 
 class DataProfiling:
@@ -636,13 +636,18 @@ class DataProfiling:
         print("First timestamp", series.index[0])
         print("Last timestamp", series.index[-1])
 
+        if self.data_loader.file_tag == "forecast_ny_arrests":
+            original_level = "daily"
+        else:
+            original_level = "yearly"
+
         figure(figsize=(3 * HEIGHT, HEIGHT / 2))
         plot_line_chart(
             series.index.to_list(),
             series.to_list(),
             xlabel=series.index.name,
             ylabel=self.data_loader.target,
-            title=f"{self.data_loader.file_tag} hourly {self.data_loader.target}",
+            title=f"{self.data_loader.file_tag} {original_level} {self.data_loader.target}",
         )
         savefig(f"graphs/forecasting/data_profiling/data_dimensionality/{self.data_loader.file_tag}_unvariate_forecasting.png")
         show()
@@ -694,6 +699,13 @@ class DataProfiling:
             index = df.index.to_period(gran_level)
             df = df.groupby(by=index).agg(agg_func)
             df.index = df.index.to_timestamp()  # Convert back to timestamp
+        elif gran_level == "two_years":
+            # Custom logic for two years
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+            df["two_years"] = (df.index.year // 2) * 2
+            df = df.groupby("two_years").agg(agg_func)
+            df.index = pd.to_datetime(df.index, format="%Y")
         elif gran_level == "five_years":
             # Custom logic for five years
             if not isinstance(df.index, pd.DatetimeIndex):
@@ -701,13 +713,6 @@ class DataProfiling:
             df["five_years"] = (df.index.year // 5) * 5
             df = df.groupby("five_years").agg(agg_func)
             df.index = pd.to_datetime(df.index, format="%Y")  # Convert five years to timestamp
-        elif gran_level == "decade":
-            # Custom logic for decades
-            if not isinstance(df.index, pd.DatetimeIndex):
-                df.index = pd.to_datetime(df.index)
-            df["decade"] = (df.index.year // 10) * 10
-            df = df.groupby("decade").agg(agg_func)
-            df.index = pd.to_datetime(df.index, format="%Y")  # Convert decade to timestamp
         else:
             raise ValueError(f"Unsupported granularity level: {gran_level}")
 
@@ -725,38 +730,37 @@ class DataProfiling:
 
         # Determine the granularity levels based on the file tag
         if self.data_loader.file_tag == "forecast_ny_arrests":
-            grans: list[str] = ["D", "W", "M", "Q", "Y"]
+            grans: list[str] = ["D", "M", "Y"]
         else:
-            grans: list[str] = ["Y", "five_years", "decade"]
+            grans: list[str] = ["Y", "two_years", "five_years"]
 
-        # Initialize the figure and axes
-        fig: Figure
-        axs: list[Axes]
+        # Define the desired width for the plots
+        plot_width = 3 * HEIGHT  # Keep the width consistent with the original layout
+        plot_height = HEIGHT / 2  # Adjust the height for individual plots
 
-        # If only one granularity level, axs will be a single Axes object
-        if len(grans) == 1:
-            fig, axs = subplots(1, 1, figsize=(3 * HEIGHT, HEIGHT))
-            axs = [axs]  # Convert to a list for consistent handling
-        else:
-            fig, axs = subplots(len(grans), 1, figsize=(3 * HEIGHT, HEIGHT / 2 * len(grans)))
-
-        fig.suptitle(f"{self.data_loader.file_tag} {self.data_loader.target} aggregation study")
-
-        # Plot for each granularity level
-        for i, gran in enumerate(grans):
+        # Loop through each granularity level and create a separate plot
+        for gran in grans:
             ss: Series = self.ts_aggregation_by(series, gran)
+
+            # Create a new figure for each granularity level with consistent width
+            fig, ax = subplots(1, 1, figsize=(plot_width, plot_height))
+            fig.suptitle(f"{self.data_loader.file_tag} {self.data_loader.target} granularity={gran}")
+
+            # Plot the data
             plot_line_chart(
                 ss.index.to_list(),
                 ss.to_list(),
-                ax=axs[i],
+                ax=ax,
                 xlabel=f"{ss.index.name} ({gran})",
                 ylabel=self.data_loader.target,
-                title=f"granularity={gran}",
             )
 
-        # Save and show the plot
-        savefig(f"graphs/forecasting/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity.png")
-        show()
+            # Save each plot with a unique filename
+            savefig(
+                f"graphs/forecasting/data_profiling/data_granularity/{self.data_loader.file_tag}_granularity_{gran}.png")
+
+            # Show the plot
+            show()
 
     def plot_distribuition_boxplot(self):
 
@@ -775,13 +779,13 @@ class DataProfiling:
         else:
             # Aggregation for yearly, five-year, and decade
             ss_yearly: Series = self.ts_aggregation_by(series, "Y")
+            ss_two_years: Series = self.ts_aggregation_by(series, "two_years")
             ss_five_years: Series = self.ts_aggregation_by(series, "five_years")
-            ss_decade: Series = self.ts_aggregation_by(series, "decade")
 
             aggregations = {
                 "YEARLY": ss_yearly,
-                "FIVE-YEAR": ss_five_years,
-                "DECADE": ss_decade
+                "TWO-YEAR": ss_two_years,
+                "FIVE-YEAR": ss_five_years
             }
 
         # Create subplots based on the number of aggregations
@@ -818,11 +822,11 @@ class DataProfiling:
         else:
             # Aggregation for yearly, five-year, and decade
             ss_yearly: Series = self.ts_aggregation_by(series, gran_level="Y")
+            ss_two_years: Series = self.ts_aggregation_by(series, gran_level="two_years")
             ss_five_years: Series = self.ts_aggregation_by(series, gran_level="five_years")
-            ss_decade: Series = self.ts_aggregation_by(series, gran_level="decade")
 
-            grans: list[Series] = [ss_yearly, ss_five_years, ss_decade]
-            gran_names: list[str] = ["Yearly", "Five-Year", "Decade"]
+            grans: list[Series] = [ss_yearly, ss_two_years, ss_five_years]
+            gran_names: list[str] = ["Yearly", "Two-Year", "Five-Year"]
 
         # Create subplots based on the number of aggregations
         fig: Figure
